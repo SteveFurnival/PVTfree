@@ -17,6 +17,7 @@ import matplotlib.pyplot as PL
 
 import calcReg   as CR
 import readExps  as RX
+import genPlots  as GP
 import texttable as TT
 
 #=======================================================================
@@ -656,7 +657,7 @@ def outputExps(clsIO,dicEXP,dicSAM,clsUNI) :
 #  Write Plots
 #======================================================================
 
-    if clsIO.Pall : genPlots(clsIO,dicEXP,dicSAM,clsUNI)
+    if clsIO.Pall : GP.genPlots(clsIO,dicEXP,dicSAM,clsUNI)
 
     return
 
