@@ -296,12 +296,12 @@ def calcComp(qLiq,RTp,cCon,dSTO,dSTG,Rs,Bo,Uo,clsBLK,clsIO) :
     return Co,Vo
     
 #========================================================================
-#  Gas FVF
+#  Gas FVF [rcf/scf]
 #========================================================================
 
 def gasFVF(pRes,tRes,Z) :
 
-    Bg = CO.pStand*Z*tRes/(CO.tStand*pRes)
+    Bg = (CO.pStand/CO.tStand)*Z*tRes/pRes
 
 #== Return value ======================================================
 
@@ -315,6 +315,7 @@ def setEoSVis(iSat,sOil,sGas,rOil,rGas,clsBLK) :
 
     clsBLK.EOS1["sOil"] = sOil[iSat]
     clsBLK.EOS1["sGas"] = sGas[iSat]
+    
     clsBLK.VIS1["rOil"] = rOil[iSat]
     clsBLK.VIS1["rGas"] = rGas[iSat]
 

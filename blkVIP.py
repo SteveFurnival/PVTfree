@@ -10,7 +10,10 @@
 
 #!/usr/bin/python3
 
-import blkOther as BO
+import blkOther  as BO
+import blkProps  as BP
+import constants as CO
+import genPlots  as GP
 
 def outVIP(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
@@ -23,8 +26,9 @@ def outVIP(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
     if   oTyp == "BODTAB" :
         outBODTAB(fVIP,dTab,eTab,clsBLK,clsUNI,clsIO)
+        fOil = []
     elif oTyp == "BOOTAB" :  
-        outBOOTAB(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO)
+        fOil = outBOOTAB(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
 
 #== Gas Keywords ======================================================    
 
@@ -32,8 +36,13 @@ def outVIP(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
     if   gTyp == "BDGTAB" :
         outBDGTAB(fVIP,dTab,eTab,clsBLK,clsUNI,clsIO)
+        fGas = []
     elif gTyp == "BOGTAB" :  
-        outBOGTAB(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO)
+        fGas = outBOGTAB(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO)
+
+#== Plot the Data ====================================================
+
+    GP.blackPlots(dTab,eTab,fOil,fGas,clsBLK,clsUNI)
 
 #== No return value ===================================================
 
@@ -157,7 +166,7 @@ def outBODTAB(fVIP,dTab,eTab,clsBLK,clsUNI,clsIO) :
 #  BOOTAB Table
 #========================================================================
 
-def outBOOTAB(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
+def outBOOTAB(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
     nSat = len(dTab)
     nExt = len(eTab)
@@ -209,6 +218,8 @@ def outBOOTAB(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 #----------------------------------------------------------------------
 #  Undersaturated Data
 #----------------------------------------------------------------------
+
+    fOil = []
         
     fVIP.write("C \n")
     fVIP.write("C  Undersaturated Data\n")
@@ -224,43 +235,51 @@ def outBOOTAB(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 
     while iSat >= 0 :
 
-        Pr = dTab[iSat][clsBLK.iPr]
-        outputUnderSatOil(Pr,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,clsUNI)
+        Ps = dTab[iSat][clsBLK.iPr]
+        Rs = dTab[iSat][clsBLK.iRs]
+        Us = dTab[iSat][clsBLK.iUo]
+        
+        BO.setEoSVis(iSat,sOil,sGas,rOil,rGas,clsBLK)
+        
+        dOut = outputUnderSatOil(Ps,Rs,Us,dTab,eTab,lSat,lExt,qMonV,clsBLK,clsIO,clsUNI)
         fVIP.write("\n")
         lSat += 1
 
 #-- Decrement the iSat counter --------------------------------------        
 
         iSat -= 1
+        fOil.append(dOut)
 
 #== Extended Data =====================================================
 
     iExt = nExt - 1
 
+    BO.setEoSVis(0,sOil,sGas,rOil,rGas,clsBLK)
+
     while iExt >= 0 :
 
-        Pr = eTab[iExt][clsBLK.iPr]
-        outputUnderSatOil(Pr,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,clsUNI)
+        Ps = eTab[iExt][clsBLK.iPr]
+        Rs = eTab[iExt][clsBLK.iRs]
+        Us = eTab[iExt][clsBLK.iUo]
+
+        dOut = outputUnderSatOil(Ps,Rs,Us,dTab,eTab,lSat,lExt,qMonV,clsBLK,clsIO,clsUNI)
         fVIP.write("\n")
         lExt += 1
 
 #-- Decrement the iExt counter ========================================
 
         iExt -= 1
+        fOil.append(dOut)
 
 #== No return value ===================================================
 
-    return
-
-#== No return value ===================================================
-
-    return
+    return fOil
 
 #========================================================================
 #  Blocks of Undersaturated Oil Data
 #========================================================================
 
-def outputUnderSatOil(Pr,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,clsUNI) :
+def outputUnderSatOil(Pb,Rb,Ub,dTab,eTab,lSat,lExt,qMonV,clsBLK,clsIO,clsUNI) :
 
 #-- Initialisation --------------------------------------------------    
 
@@ -294,16 +313,24 @@ def outputUnderSatOil(Pr,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,cl
     iExt = nExt - 1 - lExt
 
     dOut = []
-
-    RTp = clsBLK.RT/Pr
+    qFrs = True
 
 #-- Saturated Data --------------------------------------------------    
 
     while iSat >= 0 :
-        BO.setEoSVis(iSat,sOil,sGas,rOil,rGas,clsBLK)
-        Rs  = dTab[iSat][clsBLK.iRs]
-        Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rs,clsBLK,clsIO)
-        dRow  = [Rs,Bo,Uo]
+        
+        Ps = dTab[iSat][clsBLK.iPr]
+        Rs = dTab[iSat][clsBLK.iRs]
+        
+        RTp = clsBLK.RT/Ps
+
+        Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+
+        if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Ps)
+            
+        if qFrs : dRow = [Ps,Bo,Uo,Rb] ; qFrs = False
+        else    : dRow = [Ps,Bo,Uo]
+        
         dOut.append(dRow)
             
 #-- Decrement iSat --------------------------------------------------
@@ -312,12 +339,20 @@ def outputUnderSatOil(Pr,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,cl
 
 #-- Extended Data ---------------------------------------------------        
 
-    BO.setEoSVis(0,sOil,sGas,rOil,rGas,clsBLK)
-
     while iExt >= 0 :
-        Rs    = eTab[iExt][clsBLK.iRs]
-        Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rs,clsBLK,clsIO)
-        dRow  = [Rs,Bo,Uo]
+        
+        Ps = eTab[iExt][clsBLK.iPr]
+        Rs = eTab[iExt][clsBLK.iRs]
+        
+        RTp = clsBLK.RT/Ps
+
+        Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+        
+        if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Ps)
+            
+        if qFrs : dRow = [Ps,Bo,Uo,Rb] ; qFrs = False
+        else    : dRow = [Ps,Bo,Uo]
+        
         dOut.append(dRow)
             
 #-- Decrement iSat --------------------------------------------------
@@ -329,23 +364,23 @@ def outputUnderSatOil(Pr,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,cl
     iVal = 0
     qExt = False
 
-    Pr  = clsUNI.I2X(Pr,sPrs)
-    sPr = " {:10.3f}".format(Pr)
+    Pb  = clsUNI.I2X(Pb,sPrs)
+    sPb = " {:10.3f}".format(Pb)
 
     for iRow in range(nRow) :
-        sLin1 = "RS                 "
+        sLin1 = "PSAT               "
         sLin2 = "P            "
-        sLin3 = sPr + "  "
+        sLin3 = sPb + "  "
         for jCol in range(nCol) :
-            Rs  = dOut[iVal][0]
+            Pr  = dOut[iVal][0]
             Bo  = dOut[iVal][1]
             Uo  = dOut[iVal][2]
-            Rs  = clsUNI.I2X(Rs,sGOR)
+            Pr  = clsUNI.I2X(Pr,sPrs)
             Bo  = clsUNI.I2X(Bo,sFVF)
-            sRs = " {:10.3f}".format(Rs)
+            sPr = " {:10.3f}".format(Pr)
             sBo = " {:10.5f}".format(Bo)
             sUo = " {:10.5f}".format(Uo)
-            sLin1 = sLin1 + sRs + "             "
+            sLin1 = sLin1 + sPr + "             "
             sLin2 = sLin2 + "    BO      " + "     VO     "
             sLin3 = sLin3 + sBo + "  " + sUo
             iVal += 1
@@ -360,9 +395,9 @@ def outputUnderSatOil(Pr,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,cl
         fVIP.write(sLin3)
         if qExt : break
 
-#== No return value ===================================================
+#== Return value ======================================================
 
-    return
+    return dOut
 
 #========================================================================
 #  BDGTAB Keyword
@@ -469,16 +504,19 @@ def outBOGTAB(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 #  Undersaturated Data
 #----------------------------------------------------------------------
 
+    fGas = []
+
     fVIP.write("C \n")
     fVIP.write("C  Undersaturated Data\n")
     fVIP.write("C \n")
     fVIP.write("\n")
 
-    Rv   = 0.0  #-- Dry Gas First
+    Rv   = 0.0          #-- Dry Gas First
+    Pr   = CO.pStand    #-- At Standard Pressure
     lSat = 0
     lExt = 0
 
-    outputUnderSatGas(Rv,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,clsUNI)
+    outputUnderSatGas(Rv,Pr,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,clsUNI)
     fVIP.write("\n")
 
 #== Saturated Data ====================================================    
@@ -488,13 +526,16 @@ def outBOGTAB(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
     while iSat >= 0 :
 
         Rv = dTab[iSat][clsBLK.iRv]
-        outputUnderSatGas(Rv,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,clsUNI)
+        Pr = dTab[iSat][clsBLK.iPr]
+
+        dOut = outputUnderSatGas(Rv,Pr,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,clsUNI)
         fVIP.write("\n")
         lSat += 1
 
 #-- Decrement the iSat counter --------------------------------------        
 
         iSat -= 1
+        fGas.append(dOut)
 
 #== Extended Data =====================================================
 
@@ -503,23 +544,26 @@ def outBOGTAB(fVIP,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
     while iExt >= 0 :
 
         Rv = eTab[iExt][clsBLK.iRv]
-        outputUnderSatGas(Rv,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,clsUNI)
+        Pr = eTab[iExt][clsBLK.iPr]
+        
+        dOut = outputUnderSatGas(Rv,Pr,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,clsUNI)
         fVIP.write("\n")
         lExt += 1
 
 #-- Decrement the iExt counter ========================================
 
         iExt -= 1
+        fGas.append(dOut)
 
 #== No return value ===================================================
 
-    return
+    return fGas
 
 #========================================================================
 #  Blocks of Undersaturated Gas Data
 #========================================================================
 
-def outputUnderSatGas(Rv,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,clsUNI) :
+def outputUnderSatGas(Rd,Pd,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,clsUNI) :
 
 #-- Initialisation --------------------------------------------------    
 
@@ -553,15 +597,22 @@ def outputUnderSatGas(Rv,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,cl
     iExt = nExt - 1 - lExt
 
     dOut = []
+    qFrs = True
 
 #-- Saturated Data --------------------------------------------------    
 
     while iSat >= 0 :
+        
         Pr  = dTab[iSat][clsBLK.iPr]
+        Rv  = dTab[iSat][clsBLK.iRv]
+        
         RTp = clsBLK.RT/Pr
         BO.setEoSVis(iSat,sOil,sGas,rOil,rGas,clsBLK)
-        Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
-        dRow = [Pr,Bg,Ug]
+        Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rd,clsBLK,clsIO)
+
+        if qFrs : dRow = [Rv,Bg,Ug,Rd] ; qFrs = False
+        else    : dRow = [Rv,Bg,Ug]
+        
         dOut.append(dRow)
             
 #-- Decrement iSat --------------------------------------------------
@@ -573,10 +624,16 @@ def outputUnderSatGas(Rv,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,cl
     BO.setEoSVis(0,sOil,sGas,rOil,rGas,clsBLK)
 
     while iExt >= 0 :
+        
         Pr  = eTab[iExt][clsBLK.iPr]
+        Rv  = eTab[iExt][clsBLK.iRv]
+        
         RTp = clsBLK.RT/Pr
-        Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
-        dRow = [Pr,Bg,Ug]
+        Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rd,clsBLK,clsIO)
+        
+        if qFrs : dRow = [Rv,Bg,Ug,Rd] ; qFrs = False
+        else    : dRow = [Rv,Bg,Ug]
+        
         dOut.append(dRow)
             
 #-- Decrement iSat --------------------------------------------------
@@ -588,24 +645,23 @@ def outputUnderSatGas(Rv,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,cl
     iVal = 0
     qExt = False
 
-    Rv = clsUNI.I2X(Rv,sCGR)
-
-    sRv = " {:10.5f}".format(Rv)
+    Rd  = clsUNI.I2X(Rd,sCGR)
+    sRd = " {:10.5f}".format(Rd)
 
     for iRow in range(nRow) :
-        sLin1 = "P                  "
+        sLin1 = "RVSAT              "
         sLin2 = "RV           "
-        sLin3 = sRv + "  "
+        sLin3 = sRd + "  "
         for jCol in range(nCol) :
-            Pr  = dOut[iVal][0]
+            Rv  = dOut[iVal][0]
             Bg  = dOut[iVal][1]
             Ug  = dOut[iVal][2]
-            Pr  = clsUNI.I2X(Pr,sPrs)
+            Rv  = clsUNI.I2X(Rv,sCGR)
             Bg  = clsUNI.I2X(Bg,sFVF)
-            sPr = " {:10.3f}".format(Pr)
+            sRv = " {:10.5f}".format(Rv)
             sBg = " {:10.5f}".format(Bg)
             sUg = " {:10.5f}".format(Ug)
-            sLin1 = sLin1 + sPr + "             "
+            sLin1 = sLin1 + sRv + "             "
             sLin2 = sLin2 + "    BG      " + "     VG     "
             sLin3 = sLin3 + sBg + "  " + sUg
             iVal += 1
@@ -620,9 +676,9 @@ def outputUnderSatGas(Rv,dTab,eTab,lSat,lExt,sOil,sGas,rOil,rGas,clsBLK,clsIO,cl
         fVIP.write(sLin3)
         if qExt : break
 
-#== No return value ===================================================
+#== Return value ======================================================
 
-    return
+    return dOut
 
 #========================================================================
 #  Write line of Dead Oil Data (3 values)

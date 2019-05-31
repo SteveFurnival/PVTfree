@@ -11,6 +11,7 @@
 
 import blkOther as BO
 import blkProps as BP
+import genPlots as GP
 
 def outE100(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
@@ -23,10 +24,12 @@ def outE100(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
     if   oTyp == "PVDO" :
         outPVDO(f100,dTab,eTab,clsBLK,clsUNI,clsIO)
+        fOil = []
     elif oTyp == "PVCO" :
         outPVCO(f100,dTab,eTab,clsBLK,clsUNI,clsIO)
-    elif oTyp == "PVTO" :  #-- Must be PVTO
-        outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
+        fOil = []
+    elif oTyp == "PVTO" :
+        fOil = outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
 
 #== Gas Keywords =====================================================    
 
@@ -34,8 +37,13 @@ def outE100(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
     if   gTyp == "PVDG" :
         outPVDG(f100,dTab,eTab,clsBLK,clsUNI,clsIO)
-    elif gTyp == "PVTG" :  #-- Must be PVTG
-        outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO)
+        fGas = []
+    elif gTyp == "PVTG" :
+        fGas = outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO)
+
+#== Plot the Data ====================================================
+
+    GP.blackPlots(dTab,eTab,fOil,fGas,clsBLK,clsUNI)
 
 #== No return values =================================================
 
@@ -49,6 +57,35 @@ def outPVDO(f100,dTab,eTab,clsBLK,clsUNI,clsIO) :
 
     nSat = len(dTab)
     nExt = len(eTab)
+
+    iSat = nSat - 1
+    iExt = nExt - 1
+
+#----------------------------------------------------------------------
+#  Saturated Data
+#----------------------------------------------------------------------
+
+    sExt = ""
+
+    while iSat >= 0 :
+
+        outputPVTOsat(f100,iSat,dTab,sExt,clsBLK,clsIO,clsUNI)
+
+#== Decrement the iSat counter ========================================
+
+        iSat -= 1
+        
+#----------------------------------------------------------------------
+#  Extended Data
+#----------------------------------------------------------------------
+
+    while iExt >= 0 :
+
+        outputPVTOsat(f100,iExt,eTab,sExt,clsBLK,clsIO,clsUNI)
+
+#== Decrement the iExt counter ========================================
+
+        iExt -= 1
 
 #== No return value ===================================================
 
@@ -122,11 +159,15 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
     dSTG = clsBLK.dSTG
     pInc = clsBLK.Pinc
 
+    fOil = []   #-- Store Under-Saturated Oil Data for Plotting
+
 #----------------------------------------------------------------------
 #  Saturated Data
 #----------------------------------------------------------------------
 
     while iSat >= 0 :
+
+        fCol = []
 
         if iSat == 0 : sExt = "  -- Psat"
         else         : sExt = "  -- Saturated"
@@ -135,7 +176,13 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
         Pb = dTab[iSat][clsBLK.iPr]
         Rb = dTab[iSat][clsBLK.iRs]
+        Bb = dTab[iSat][clsBLK.iBo]
         Ub = dTab[iSat][clsBLK.iUo]
+
+        dRow = [Pb,Bb,Ub,Rb]
+        fCol.append(dRow)
+
+        BO.setEoSVis(iSat,sOil,sGas,rOil,rGas,clsBLK)
 
 #== "Saturated" Under-Saturated Data ==================================
 
@@ -144,13 +191,16 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
         while jSat >= 0 :
 
-            BO.setEoSVis(jSat,sOil,sGas,rOil,rGas,clsBLK)
-
             Pr    = dTab[jSat][clsBLK.iPr]
             RTp   = clsBLK.RT/Pr
             Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+
             if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            
             outputPVTOund(f100,Pr,Bo,Uo,sExt,clsBLK,clsIO,clsUNI)
+
+            dRow = [Pr,Bo,Uo]
+            fCol.append(dRow)
 
 #-- Decrement the jSat counter --------------------------------------            
 
@@ -160,8 +210,6 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
         jExt = nExt - 1
 
-        BO.setEoSVis(0,sOil,sGas,rOil,rGas,clsBLK)
-
         while jExt >= 0 :
 
             if jExt == 0 : sExt = "  /"
@@ -169,8 +217,13 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
             Pr    = eTab[jExt][clsBLK.iPr]
             RTp   = clsBLK.RT/Pr
             Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+            
             if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            
             outputPVTOund(f100,Pr,Bo,Uo,sExt,clsBLK,clsIO,clsUNI)
+
+            dRow = [Pr,Bo,Uo]
+            fCol.append(dRow)
 
 #-- Decrement the jExt counter --------------------------------------            
 
@@ -181,6 +234,8 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
         f100.write("\n")
 
         iSat -= 1
+
+        fOil.append(fCol)
         
 #----------------------------------------------------------------------
 #  Extended Data
@@ -190,13 +245,19 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
     while iExt >= 0 :
 
+        fCol = []
+
         sExt = "  -- Extended"
 
         outputPVTOsat(f100,iExt,eTab,sExt,clsBLK,clsIO,clsUNI)
 
         Pb = eTab[iExt][clsBLK.iPr]
         Rb = eTab[iExt][clsBLK.iRs]
+        Bb = eTab[iExt][clsBLK.iBo]
         Ub = eTab[iExt][clsBLK.iUo]
+
+        dRow = [Pb,Bb,Ub,Rb]
+        fCol.append(dRow)
 
 #== "Extended" Under-Saturated Data ===================================
 
@@ -210,8 +271,13 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
             Pr    = eTab[jExt][clsBLK.iPr]
             RTp   = clsBLK.RT/Pr
             Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+            
             if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            
             outputPVTOund(f100,Pr,Bo,Uo,sExt,clsBLK,clsIO,clsUNI)
+
+            dRow = [Pr,Bo,Uo]
+            fCol.append(dRow)
 
 #-- Decrement the jExt counter --------------------------------------            
 
@@ -220,10 +286,16 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 #== Extra Row =========================================================
 
         if iExt == 0 :
+            
             Pr   = Pr + pInc
             RTp  = clsBLK.RT/Pr
             Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+
             if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+
+            dRow = [Pr,Bo,Uo]
+            fCol.append(dRow)
+
             sExt = "  /"
             outputPVTOund(f100,Pr,Bo,Uo,sExt,clsBLK,clsIO,clsUNI)
 
@@ -233,12 +305,14 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
         iExt -= 1
 
+        fOil.append(fCol)
+        
     f100.write("/\n")
     f100.write("\n")
         
-#== No return value ===================================================
+#== Return value ======================================================
 
-    return
+    return fOil
 
 #========================================================================
 #  PVDG Keyword
@@ -307,19 +381,30 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
     dSTO = clsBLK.dSTO
     dSTG = clsBLK.dSTG
 
+    fGas = []   #-- Store Under-Saturated Gas Data for Plotting
+
 #----------------------------------------------------------------------
 #  Saturated Data
 #----------------------------------------------------------------------
 
     while iSat >= 0 :
 
+        fCol = []
+
         if iSat == 0 : sExt = "  -- Psat"
         else         : sExt = "  -- Saturated"
 
         outputPVTGsat(f100,iSat,dTab,sExt,clsBLK,clsIO,clsUNI)
 
-        Pr  = dTab[iSat][clsBLK.iPr]
-        RTp = clsBLK.RT/Pr
+        Pd  = dTab[iSat][clsBLK.iPr]
+        Rd  = dTab[iSat][clsBLK.iRv]
+        Bd  = dTab[iSat][clsBLK.iBg]
+        Ud  = dTab[iSat][clsBLK.iUg]
+
+        dRow = [Rd,Bd,Ud,Pd]
+        fCol.append(dRow)
+        
+        RTp = clsBLK.RT/Pd
 
 #-- Re-fitted EoS/Visc data for under-saturated calculations --------        
 
@@ -336,6 +421,9 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
             Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
             outputPVTGund(f100,Rv,Bg,Ug,sExt,clsBLK,clsIO,clsUNI)
 
+            dRow = [Rv,Bg,Ug]
+            fCol.append(dRow)
+
 #-- Decrement the jSat counter --------------------------------------
 
             jSat += 1
@@ -350,23 +438,30 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 #== Decrement the iSat counter ========================================
 
         iSat -= 1
+        fGas.append(fCol)
         
 #----------------------------------------------------------------------
 #  Extended Data
 #----------------------------------------------------------------------
 
+    BO.setEoSVis(0,sOil,sGas,rOil,rGas,clsBLK)
+
     while iExt >= 0 :
 
+        fCol = []
         sExt = "  -- Extended"
 
         outputPVTGsat(f100,iExt,eTab,sExt,clsBLK,clsIO,clsUNI)
 
-        Pr  = eTab[iExt][clsBLK.iPr]
-        RTp = clsBLK.RT/Pr
+        Pd  = eTab[iExt][clsBLK.iPr]
+        Rd  = eTab[iExt][clsBLK.iRv]
+        Bd  = eTab[iExt][clsBLK.iBg]
+        Ud  = eTab[iExt][clsBLK.iUg]
 
-#-- Re-fitted EoS/Visc data for under-saturated calculations --------        
-
-        BO.setEoSVis(0,sOil,sGas,rOil,rGas,clsBLK)
+        dRow = [Rd,Bd,Ud,Pd]
+        fCol.append(dRow)
+        
+        RTp = clsBLK.RT/Pd
 
 #== Undersaturated Data ===============================================
 
@@ -378,6 +473,9 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
             Rv = eTab[jExt][clsBLK.iRv]
             Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
             outputPVTGund(f100,Rv,Bg,Ug,sExt,clsBLK,clsIO,clsUNI)
+
+            dRow = [Rv,Bg,Ug]
+            fCol.append(dRow)
 
 #-- Increment the jSat counter --------------------------------------
 
@@ -394,6 +492,9 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
             Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
             outputPVTGund(f100,Rv,Bg,Ug,sExt,clsBLK,clsIO,clsUNI)
 
+            dRow = [Rv,Bg,Ug]
+            fCol.append(dRow)
+
 #-- Decrement the jSat counter --------------------------------------
 
             jSat += 1
@@ -409,14 +510,19 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
         Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
         outputPVTGund(f100,Rv,Bg,Ug,sExt,clsBLK,clsIO,clsUNI)
 
+        dRow = [Rv,Bg,Ug]
+        fCol.append(dRow)
+
+        fGas.append(fCol)
+
 #== Terminating Slash =================================================
 
     f100.write("/\n")
     f100.write("\n")
         
-#== No return value ===================================================
+#== Return value ======================================================
 
-    return
+    return fGas
 
 #========================================================================
 #  PVDO, PVCO or PVTO Header
@@ -536,10 +642,12 @@ def outputPVTOsat(fSim,iRow,fTab,sExt,clsBLK,clsIO,clsUNI) :
 
     sLabl = "    " + sRs + "  " + sPr + "  " + sBo + "  " + sUo + sExt
 
-    if oTyp == "PVCO" :
+    if   oTyp == "PVCO" :
         sCo   = " {:10.3e}".format(Co)
         sVo   = " {:10.3e}".format(Vo)
         sLabl = sLabl + "  " + sCo + "  " + sVo + "\n"
+    elif oTyp == "PVDO" :
+        sLabl = "    " + sPr + "  " + sBo + "  " + sUo + sExt
     else :
         sLabl = sLabl + "\n"
 
@@ -571,13 +679,15 @@ def outputPVTGsat(fSim,iRow,fTab,sExt,clsBLK,clsIO,clsUNI) :
 
     if OutU == "MET" :
         Pr   = clsUNI.I2X(Pr,"bara")
+        sRv  = " {:10.3e}".format(Rv)
+        sBg  = " {:10.3e}".format(Bg)
     else :
         Rv   = clsUNI.I2X(Rv,"stb/mscf")
         Bg   = clsUNI.I2X(Bg,"rb/mscf")
+        sRv  = " {:10.5f}".format(Rv)
+        sBg  = " {:10.5f}".format(Bg)
 
     sPr = " {:10.3f}".format(Pr)
-    sRv = " {:10.5f}".format(Rv)
-    sBg = " {:10.5f}".format(Bg)
     sUg = " {:10.5f}".format(Ug)
 
     if gTyp == "PVDG" :
@@ -620,14 +730,15 @@ def outputPVTGund(fSim,Rv,Bg,Ug,sExt,clsBLK,clsIO,clsUNI) :
     OutU = clsBLK.OutU               #-- FLD (Field) or MET (Metric)
 
     if OutU == "MET" :
-        pass
+        sRv = " {:10.3e}".format(Rv)
+        sBg = " {:10.3e}".format(Bg)
     else :
         Rv = clsUNI.I2X(Rv,"stb/mscf")
         Bg = clsUNI.I2X(Bg,"rb/mscf")
+        sRv = " {:10.5f}".format(Rv)
+        sBg = " {:10.5f}".format(Bg)
 
     sPr = "           "
-    sRv = " {:10.5f}".format(Rv)
-    sBg = " {:10.5f}".format(Bg)
     sUg = " {:10.5f}".format(Ug)
 
     sLabl = "    " + sPr + "  " + sRv + "  " + sBg + "  " + sUg + sExt + "\n"

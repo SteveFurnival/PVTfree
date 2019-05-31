@@ -11,23 +11,35 @@
 
 from   math  import exp
 
+import constants as CO
+
 #========================================================================
 #  E100 Water Properties (PVTW Keyword)
 #========================================================================
 
-def calcPVTW(clsBLK,clsIO,clsUNI) :
+def calcPVTW(clsSIM,clsIO,clsUNI) :
 
-    pRef = clsBLK.pRefW
-    tRes = clsBLK.Tres
-    mFrc = clsBLK.bSalt
+#-- Brine Density at Surface Conditions -----------------------------    
+
+    pSur = CO.pStand
+    tSur = CO.tStand
+    mFrc = clsSIM.bSalt
+
+    dSTW,dumW = calcRoweChouDen(mFrc,tSur,pSur,clsUNI)
+
+    clsSIM.dSTW = dSTW
 
 #-- Brine Density at Reference Conditions ---------------------------    
+
+    pRef = clsSIM.pRefW
+    tRes = clsSIM.Tres
+    mFrc = clsSIM.bSalt
 
     dWat,comW = calcRoweChouDen(mFrc,tRes,pRef,clsUNI)
 
 #-- Bw(Ref) = Den(STC)/Den(Ref) = V(Ref)/V(STC) ---------------------
 
-    BwRf = clsBLK.dSTW/dWat
+    BwRf = clsSIM.dSTW/dWat
 
 #-- Brine Viscosity and Viscosibility [= (1/mu)(dmu/dp)] ------------    
 
@@ -35,10 +47,10 @@ def calcPVTW(clsBLK,clsIO,clsUNI) :
 
 #== Store results for Output ==========================================
 
-    clsBLK.bRefW = BwRf
-    clsBLK.uRefW = uWRf
-    clsBLK.cRefW = comW
-    clsBLK.vRefW = uVCB
+    clsSIM.bRefW = BwRf
+    clsSIM.uRefW = uWRf
+    clsSIM.cRefW = comW
+    clsSIM.vRefW = uVCB
 
     return
 

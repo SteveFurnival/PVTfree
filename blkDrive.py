@@ -124,7 +124,7 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
     Z = NP.zeros(nCom)
     for iC in range(nCom) : Z[iC] = clsSAM.gZI(iC)
 
-    sNam = dicSAM[iSam].sName
+    sNam = dicSAM[iSam].sName ; clsBLK.setSamNam(sNam)  #-- Store the name
 
     xTyp = clsBLK.xTyp
     tRes = clsBLK.Tres
@@ -226,7 +226,6 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
 
     pRes = pMax
     qIns = True
-    iRow = 0
 
 #======================================================================
 #  Build pTab-Array
@@ -236,25 +235,17 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
 
         if pRes > pSat :                #-- Above Psat
             pTab.append(pRes)
-            iRow += 1
         else :
             if qIns :                   #-- Insert Psat
                 pTab.append(pSat)
                 qIns = False
-                iSat = iRow
-                iRow += 1
             pTab.append(pRes)           #-- Below Psat
-            iRow += 1
             
         pRes = pRes - pInc              #-- Decrement Pressure
 
 #-- Total number of stages (pressure nodes) -------------------------
 
     nPrs = len(pTab)
-
-    aTab = NP.zeros((nPrs,11))
-
-    aTab[iSat][:] = dRow                #-- Store Psat data in right aTab row
 
 #======================================================================
 #  Depletion Stages
@@ -265,7 +256,6 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
 
     zTot = 1.0
     pRes = pMax
-    iRow = 0
     qIns = True
 
     while pRes >= pMin :
@@ -273,13 +263,12 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
 #-- Above Psat ------------------------------------------------------        
 
         if pRes > pSat :
-            iRow += 1
+            pass
         else :
 
 #-- Psat-Row? -------------------------------------------------------
 
             if qIns :
-                iRow += 1
                 qIns = False
 
 #-- This experiment at varying temperature so set when needed -------
@@ -333,10 +322,6 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
 
             dRow = [pRes,Rs,Bo,Uoil,Coil,Viso,Rv,Bg,Ugas,Bd,Ud]
             dTab.append(dRow)
-
-            aTab[iRow][:] = dRow    #-- Store data in aTab row
-
-            iRow += 1
 
 #== Decrement Pressure and Continue ===================================
 
@@ -510,9 +495,6 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
             
             eRow = [pRes,Rs,Bo,Uo,Co,Vo,Rv,Bg,Ug,Bd,Ud]
             eTab.append(eRow)
-
-            aTab[iRow][:] = eRow
-            iRow         += 1
 
 #========================================================================
 #  Oil and Gas Output depends on Simulator Type

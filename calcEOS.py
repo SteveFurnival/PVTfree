@@ -47,8 +47,7 @@ def calcEoSCoefsT(p,T,x,qT,clsEOS) :
 
 #== Form a(T) = p + sqrt(T)*q =========================================
 
-    aI = NP.copy(clsEOS.aP)     #-- Vector!
-    aI = aI + sqrT*clsEOS.aQ    #-- Vector!
+    aI = clsEOS.aP + sqrT*clsEOS.aQ    #-- Vector!
 
 #-- Work arrays -----------------------------------------------------    
 
@@ -101,8 +100,7 @@ def calcEoSCoefsX(p,T,clsEOS) :
 
 #== Calculate a = p + sqrt(T)*q =======================================    
 
-    aI = NP.copy(clsEOS.aP)     #-- Vector!
-    aI = aI + sqrT*clsEOS.aQ    #-- Vector!
+    aI = clsEOS.aP + sqrT*clsEOS.aQ    #-- Vector!
 
 #== Build the Aij Matrix ==============================================
 
@@ -322,7 +320,7 @@ def calcdEdP(pRes,A,B,Eta,dFdE,clsEOS) :
 
 def sortCubicRoots(iLiq,E2,E1,E0,A,B,clsEOS) :
 
-    nReal,rSmal,rLarg = solveCubic(B,E2,E1,E0)
+    nReal,rSmal,rLarg = solveCubic(E2,E1,E0)
 
     if nReal > 1 and rSmal < 0.0 :
         
@@ -356,7 +354,7 @@ def sortCubicRoots(iLiq,E2,E1,E0,A,B,clsEOS) :
 #  http://www.aip.de/groups/soe/local/numres/bookfpdf/f5-6.pdf
 #========================================================================
 
-def solveCubic(B,E2,E1,E0) :
+def solveCubic(E2,E1,E0) :
 
     F2 = E2*CO.Third                  #--  a/3
     F1 = E1*CO.Third                  #--  b/3

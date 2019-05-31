@@ -10,7 +10,8 @@
 
 #!/usr/bin/python3
 
-import blkE100 as B1
+import blkE100  as B1
+import genPlots as GP
 
 def outMORE(fMOR,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
@@ -23,8 +24,9 @@ def outMORE(fMOR,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
     if   oTyp == "OPVT" :
         outOPVT(fMOR,dTab,eTab,clsBLK,clsUNI,clsIO)
+        fOil = []
     elif oTyp == "PVTO" :  #-- Must be PVTO
-        B1.outPVTO(fMOR,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
+        fOil = B1.outPVTO(fMOR,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
 
 #== Gas Keywords ======================================================    
 
@@ -32,8 +34,13 @@ def outMORE(fMOR,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
     if   gTyp == "GPVT" :
         outGPVT(fMOR,dTab,eTab,clsBLK,clsUNI,clsIO)
+        fGas = []
     elif gTyp == "PVTG" :  #-- Must be PVTG
-        B1.outPVTG(fMOR,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO)
+        fGas = B1.outPVTG(fMOR,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO)
+
+#== Plot the Data ====================================================
+
+    GP.blackPlots(dTab,eTab,fOil,fGas,clsBLK,clsUNI)
 
 #== No return value ===================================================
 

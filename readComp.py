@@ -299,7 +299,7 @@ def writeGEM(clsEOS,dicSAM,clsCMP,clsIO,clsUNI) :
         sUni = ": [degF]"
         for iC in range(nCom) : dVec[iC] = clsUNI.I2X(dVec[iC],"degf")
     sCom = "**  Boiling Point Temperature " + sUni + "\n"
-    sKey = "*SG"
+    sKey = "*TB"
     nLen = 7
     sFor = "{:8.3f}"
 
@@ -433,10 +433,45 @@ def writeGEM(clsEOS,dicSAM,clsCMP,clsIO,clsUNI) :
     fSim.write(sOut)
     fSim.write("\n")
 
+#-- Brine Density at Standard (Stock Tank) Conditions ---------------    
+
+    CW.calcPVTW(clsCMP,clsIO,clsUNI)  #-- Brine Properties
+
+    dSTW = clsCMP.dSTW
+
 #-- Aqueous Phase Properties ----------------------------------------    
 
-    sLabl = "** Aqueous Phase Properties " + sUni + "\n"
+    sLabl = "** Aqueous Phase Properties\n"
     fSim.write(sLabl)
+    fSim.write("\n")
+
+    pRefW = clsCMP.pRefW    #-- Ref Pres
+    bRefW = clsCMP.bRefW    #-- Bw = Vres/Vsur = RhoSur/RhoRes
+    cRefW = clsCMP.cRefW    #-- Compressibility
+    bSalt = clsCMP.bSalt
+
+    dRes  = dSTW/bRefW      #-- Reservoir Density
+
+    if OutU == "MET" :
+        dSTW  = clsUNI.I2X(dSTW ,"kg/m3")
+        dRes  = clsUNI.I2X(dRes ,"kg/m3")
+        pRefW = clsUNI.I2X(pRefW,"kpa")
+        cRefW = clsUNI.I2X(cRefW,"1/kpa")
+
+    sDsur = "{:10.3f}\n".format(dSTW)
+    sDres = "{:10.3f}\n".format(dRes)
+    sPref = "{:10.3f}\n".format(pRefW)
+    sCref = "{:10.3e}\n".format(cRefW)
+    sSalt = "{:10.5f}\n".format(bSalt)
+
+    fSim.write("*DENW   " + sDsur)
+    fSim.write("*DENWS  " + sDres)
+    fSim.write("*CW     " + sCref)
+    fSim.write("*REFPW  " + sPref)
+    fSim.write("\n")
+
+    fSim.write("*AQUEOUS-VISCOSITY *KESTIN\n")
+    fSim.write("*SALINITY          *WTFRAC  " + sSalt)
     fSim.write("\n")
 
 #== No return value ===================================================
@@ -550,9 +585,9 @@ def writeVIP(clsEOS,dicSAM,clsCMP,clsIO,clsUNI) :
         sPc = "{:10.3f}  ".format(Pc)
         Zc = clsEOS.gPP("ZC",iC) ; sZc = "{:10.5f}  ".format(Zc)
         AF = clsEOS.gPP("AF",iC) ; sAF = "{:10.5f}  ".format(AF)
-        MA = clsEOS.gPP("MA",iC) ; sOA = "{:10.5f}  ".format(MA*clsEOS.OA)
-        MB = clsEOS.gPP("MB",iC) ; sOB = "{:10.5f}  ".format(MB*clsEOS.OB)
-        SS = clsEOS.gPP("SS",iC) ; sSS = "{:10.3f}  ".format(SS)
+        MA = clsEOS.gPP("MA",iC) ; sOA = "{:10.7f}  ".format(MA*clsEOS.OA)
+        MB = clsEOS.gPP("MB",iC) ; sOB = "{:10.7f}  ".format(MB*clsEOS.OB)
+        SS = clsEOS.gPP("SS",iC) ; sSS = "{:10.7f}  ".format(SS)
         PA = clsEOS.gPP("PA",iC) ; sPA = "{:10.3f}  ".format(PA)
         sOut = sN + sMw + sTc + sPc + sZc + sAF + sOA + sOB + sSS + sPA + "\n"
         fSim.write(sOut)
@@ -590,6 +625,44 @@ def writeVIP(clsEOS,dicSAM,clsCMP,clsIO,clsUNI) :
     fSim.write(sHead)
     fSim.write("ENDEOS\n")
     fSim.write(sHead)
+    fSim.write("\n")
+
+#== Water Properties ==================================================
+
+    fSim.write("C\n")
+    fSim.write("C  Water Properties\n")
+    fSim.write("C\n")
+    fSim.write("\n")
+
+    CW.calcPVTW(clsCMP,clsIO,clsUNI)  #-- Brine Properties
+
+    pRefW = clsCMP.pRefW    #-- Ref Pres
+    dSTW  = clsCMP.dSTW     #-- Stock Tank Density
+    bRefW = clsCMP.bRefW    #-- Ref Bw
+    cRefW = clsCMP.cRefW    #-- Ref Comp
+    uRefW = clsCMP.uRefW    #-- Ref Visc
+    vRefW = clsCMP.vRefW    #-- Viscosibility
+
+    if OutU == "MET" :
+        pRefW = clsUNI.I2X(pRefW,"kpa")
+        dSTW  = clsUNI.I2X(dSTW ,"kg/m3")
+        cRefW = clsUNI.I2X(cRefW,"1/kpa")
+        vRefW = clsUNI.I2X(vRefW,"1/kpa")
+
+    vRefW = uRefW*vRefW     #-- d[Visc]/dp = Visc*Viscosibility
+
+    sPref = "{:10.3f}  ".format(pRefW)
+    sDsur = "{:10.3f}  ".format(dSTW)
+    sBref = "{:10.5f}  ".format(bRefW)
+    sCref = "{:10.3e}  ".format(cRefW)
+    sUref = "{:10.5f}  ".format(uRefW)
+    sVref = "{:10.3e}  ".format(vRefW)
+
+#-- Write Water Properties ------------------------------------------
+
+    fSim.write("PVTW  IPVTW  PBASEW       DWB          BWI        CW           VW        VWP\n")
+    sOut = "      1      " + sPref + sDsur + sBref + sCref + sUref + sVref + "\n"
+    fSim.write(sOut)
     fSim.write("\n")
 
 #== No return values ==================================================
@@ -853,7 +926,7 @@ def writeE300(clsEOS,dicSAM,clsCMP,clsIO,clsUNI) :
     print("Writing Compositional Description for E300")
 
     fSim = clsIO.f300
-    sInp = clsIO.fInP
+    sInp = clsIO.rNam
 
     OutU = clsCMP.OutU
 
@@ -882,6 +955,7 @@ def writeE300(clsEOS,dicSAM,clsCMP,clsIO,clsUNI) :
 #-- Number of Components --------------------------------------------
     
     nCom = clsEOS.NC
+    
     sLabl = "--  Number of Components\n"
     fSim.write(sLabl)
     fSim.write("\n")
@@ -1058,10 +1132,10 @@ def writeE300(clsEOS,dicSAM,clsCMP,clsIO,clsUNI) :
 
     for iC in range(1,nCom) :
         bVec = NP.zeros(iC)
-        nCom = iC
+        kCom = iC
         for jC in range(iC) :
             bVec[jC] = clsEOS.gIJ(iC,jC)
-        writeVectorD(fSim,sCom,sKey,nCom,nLen,sFor,bVec)
+        writeVectorD(fSim,sCom,sKey,kCom,nLen,sFor,bVec)
 
     fSim.write("/\n")
     fSim.write("\n")

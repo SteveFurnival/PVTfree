@@ -47,7 +47,7 @@ def outputHeader(fOut,sCom,clsIO) :
     fOut.write(sCom + "\n")
     fOut.write(sCom + "  Copyright (C) 2019\n")
     fOut.write(sCom + "\n")
-    fOut.write(sCom + "  Steve Furnival, HoBoil Limited, Banchory, UK, March 2019\n")
+    fOut.write(sCom + "  Steve Furnival, HoBoil Limited, Banchory, UK, June 2019\n")
     fOut.write(sCom + "\n")
     fOut.write(sCom + "  PVTfree is free software: you can redistribute it and/or modify\n")
     fOut.write(sCom + "  it under the terms of the GNU General Public License as published by\n")

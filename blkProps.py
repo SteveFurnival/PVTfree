@@ -16,7 +16,7 @@ import blkCoefs  as BC
 import calcEOS   as CE
 import constants as CO
 
-from math import exp,log10,sqrt
+from math import exp,log,log10,sqrt
 
 #========================================================================
 #  Calculate Phase FVF to re-fit (sOil,sGas)
@@ -40,7 +40,7 @@ def calcPhaseFVF(qLiq,RTp,BoCon,xOil,clsBLK,clsIO) :
     E1 = Aoil - 3.0*Boi2 -  2.0*Boil
     E0 = Boi3 +     Boi2 - Aoil*Boil
 
-    nRoot,Zsmal,Zlarg = CE.solveCubic(Boil,E2,E1,E0)
+    nRoot,Zsmal,Zlarg = CE.solveCubic(E2,E1,E0)
 
     if qLiq : Voil = Zsmal*RTp - cOil
     else    : Voil = Zlarg*RTp - cOil
@@ -443,6 +443,39 @@ def calcUndViscStand(pB,uB,p) :
     u = uB + StanCon*(p - pB)
 
     return u
+
+#========================================================================
+#  A-Coeff of Abdul-Majeed Under-Saturated Viscosity Correlation
+#  See W+B Eqn.(3.132b)
+#========================================================================
+
+def abdulMajeedA(dSTO,Rs) :
+
+    gSTO =  dSTO/CO.denWat      #-- Oil Specific Gravity
+    oAPI = 141.5/gSTO - 131.5   #-- Oil API Gravity
+
+    lnRs = log(5.615*Rs)
+
+    A = 1.9311 - 0.89941*lnRs - 0.001194*oAPI*oAPI + 0.0092545*oAPI*lnRs
+
+#== Return value ======================================================
+
+    return A
+
+#========================================================================
+#  Abdul-Majeed Under-Saturated Viscosity Correlation
+#  See W+B Eqn.(3.132a)
+#========================================================================
+
+def abdulMajeedVisc(A,P,Pb,Ub) :
+
+    expA = A - 5.2106 + 1.11*log10(P - Pb)
+
+    Uo = Ub + pow(10.0,expA)
+
+#== Return value ======================================================
+
+    return Uo
 
 #========================================================================
 #  End of Module

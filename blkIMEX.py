@@ -11,7 +11,9 @@
 #!/usr/bin/python3
 
 import blkOther  as BO
+import blkProps  as BP
 import constants as CO
+import genPlots  as GP
 
 def outIMEX(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
@@ -28,11 +30,17 @@ def outIMEX(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 #  PVTCOND     - Output BGUST & VGUST
 #======================================================================
 
+    fOil = [] ; fGas = []
+
     if   oTyp == "PVTCOND" :
-        genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO)
+        fGas = genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO)
     elif oTyp == "PVT" or oTyp == "PVTVO" :
-        genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO)
+        fOil = genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
         
+#== Plot the Data ====================================================
+
+    GP.blackPlots(dTab,eTab,fOil,fGas,clsBLK,clsUNI)
+
 #== No return value ===================================================
 
     return
@@ -188,15 +196,17 @@ def outputHeader(fSim,clsBLK,clsIO) :
 #  Generate Undersatuarted Oil Data (BOT & VOT)
 #========================================================================
 
-def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
+def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
     OutU = clsBLK.OutU               #-- FLD (Field) or MET (Metric)
 
     if OutU == "MET" :
         sPrs = "kpa"
+        sGOR = "sm3/sm3"
         sFVF = "rm3/sm3"
     else :
         sPrs = "psia"
+        sGOR = "scf/stb"
         sFVF = "rb/stb"
     sVis = "cp"
 
@@ -218,25 +228,35 @@ def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
     dSTG = clsBLK.dSTG
     pInc = clsBLK.Pinc
 
-#== "Saturated" Data ==================================================    
+#== "Saturated" Data ==================================================
+
+    fOil = []
 
     while iSat >= 0 :
 
         dOut = []
 
-        Rs = dTab[iSat][clsBLK.iRs]
+        Pb = dTab[iSat][clsBLK.iPr]
+        Rb = dTab[iSat][clsBLK.iRs]
+        Bb = dTab[iSat][clsBLK.iBo]
+        Ub = dTab[iSat][clsBLK.iUo]
 
-        jSat = iSat
+        dRow = [Pb,Bb,Ub,Rb]
+        dOut.append(dRow)
+
+        jSat = iSat - 1
+
+        BO.setEoSVis(iSat,sOil,sGas,rOil,rGas,clsBLK)
 
         while jSat >= 0 :
-
-            BO.setEoSViS(jSat,sOil,sGas,rOil,rGas,clsBLK)
 
             Pr  = dTab[jSat][clsBLK.iPr]
             RTp = clsBLK.RT/Pr
 
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rs,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
 
+            if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            
             dRow = [Pr,Bo,Uo]
             dOut.append(dRow)
 
@@ -246,8 +266,6 @@ def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 
 #-- Extended Pressure Stages ----------------------------------------            
 
-        BO.setEoSViS(0,sOil,sGas,rOil,rGas,clsBLK)
-
         jExt = nExt -1
 
         while jExt >= 0 :
@@ -255,8 +273,10 @@ def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
             Pr  = eTab[jExt][clsBLK.iPr]
             RTp = clsBLK.RT/Pr
 
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rs,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
 
+            if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            
             dRow = [Pr,Bo,Uo]
             dOut.append(dRow)
 
@@ -266,31 +286,47 @@ def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 
 #== Write BOT/VOT for this sweep ======================================
 
-        outUnderSat(fIMX,"BOT",dOut,iP,iB,sPrs,sFVF,fPrs,fFVF,clsUNI)
+        Rb  = clsUNI.I2X(Rb,sGOR)
+        sRb = "{:10.3f}".format(Rb)
 
+        fIMX.write("** GOR = " + sRb +"\n")
+        fIMX.write("\n")
+
+        outUnderSat(fIMX,"BOT",dOut,iP,iB,sPrs,sFVF,fPrs,fFVF,clsUNI)
         outUnderSat(fIMX,"VOT",dOut,iP,iU,sPrs,sVis,fPrs,fVis,clsUNI)
 
 #-- Decrement iSat counter ------------------------------------------
 
         iSat -= 1
+        fOil.append(dOut)
 
 #== "Extended" Data ===================================================
 
-    BO.setEoSViS(0,sOil,sGas,rOil,rGas,clsBLK)
+    BO.setEoSVis(0,sOil,sGas,rOil,rGas,clsBLK)
 
     while iExt >= 0 :
 
         dOut = []
 
-        jExt = iExt
+        Pb = eTab[iExt][clsBLK.iPr]
+        Rb = eTab[iExt][clsBLK.iRs]
+        Bb = eTab[iExt][clsBLK.iBo]
+        Ub = eTab[iExt][clsBLK.iUo]
+
+        dRow = [Pb,Bb,Ub,Rb]
+        dOut.append(dRow)
+
+        jExt = iExt - 1
 
         while jExt >= 0 :
 
             Pr  = eTab[jExt][clsBLK.iPr]
             RTp = clsBLK.RT/Pr
 
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rs,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
 
+            if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            
             dRow = [Pr,Bo,Uo]
             dOut.append(dRow)
 
@@ -305,24 +341,32 @@ def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
             Pr  = Pr + pInc
             RTp = clsBLK.RT/Pr
 
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rs,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
 
+            if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            
             dRow = [Pr,Bo,Uo]
             dOut.append(dRow)
 
 #== Write BOT/VOT for this sweep ======================================
 
-        outUnderSat(fIMX,"BOT",dOut,iP,iB,sPrs,sFVF,fPrs,fFVF,clsUNI)
+        Rb  = clsUNI.I2X(Rb,sGOR)
+        sRb = "{:10.3f}".format(Rb)
 
+        fIMX.write("** GOR = " + sRb +"\n")
+        fIMX.write("\n")
+
+        outUnderSat(fIMX,"BOT",dOut,iP,iB,sPrs,sFVF,fPrs,fFVF,clsUNI)
         outUnderSat(fIMX,"VOT",dOut,iP,iU,sPrs,sVis,fPrs,fVis,clsUNI)
 
 #-- Decrement iSat counter ------------------------------------------
 
         iExt -= 1
+        fOil.append(dOut)
 
-#== No return value ===================================================
+#== Return value ======================================================
 
-    return
+    return fOil
 
 #========================================================================
 #  Generate Undersatuarted Gas Data (BGUST & VGUST)
@@ -360,14 +404,24 @@ def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
     dSTO = clsBLK.dSTO
     dSTG = clsBLK.dSTG
 
+#----------------------------------------------------------------------
+#  Generate Tables
+#----------------------------------------------------------------------
+
+    fGas = []
+
     while iSat >= 0 :
 
 #-- Set EoS/Visc coefficients based on pressure ---------------------        
 
-        BO.setEoSViS(iSat,sOil,sGas,rOil,rGas,clsBLK)
+        BO.setEoSVis(iSat,sOil,sGas,rOil,rGas,clsBLK)
 
-        Pr  = dTab[iSat][clsBLK.iPr]
-        RTp = clsBLK.RT/Pr
+        Pd  = dTab[iSat][clsBLK.iPr]
+        Rd  = dTab[iSat][clsBLK.iRv]
+        Bd  = dTab[iSat][clsBLK.iBg]
+        Ud  = dTab[iSat][clsBLK.iUg]
+        
+        RTp = clsBLK.RT/Pd
 
         dOut = []
 
@@ -389,7 +443,9 @@ def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 
             Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
 
-            dRow = [Pr,Bg,Ug]
+            if jSat == iSat : dRow = [Pd,Bd,Ud,Rd]
+            else            : dRow = [Pr,Bg,Ug]
+            
             dOut.append(dRow)
 
 #-- Decrement jSat counter ------------------------------------------
@@ -398,23 +454,33 @@ def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 
 #== Write BGUST/ZGUST for this sweep ==================================
 
-        outUnderSat(fIMX,"BGUST",dOut,iP,iB,sPrs,sFVF,fPrs,fFVF,clsUNI)
+        Pd  = clsUNI.I2X(Pd,sPrs)
+        sPd = "{:10.3f}".format(Pd)
 
+        fIMX.write("** Pdew = " + sPd +"\n")
+        fIMX.write("\n")
+
+        outUnderSat(fIMX,"BGUST",dOut,iP,iB,sPrs,sFVF,fPrs,fFVF,clsUNI)
         outUnderSat(fIMX,"VGUST",dOut,iP,iU,sPrs,sVis,fPrs,fVis,clsUNI)
 
 #== Decrement iSat counter ============================================
 
-        iSat -= 1        
+        iSat -= 1
+        fGas.append(dOut)
 
 #----------------------------------------------------------------------
 #  "Extended" Data
 #----------------------------------------------------------------------
 
-    BO.setEoSViS(0,sOil,sGas,rOil,rGas,clsBLK)
+    BO.setEoSVis(0,sOil,sGas,rOil,rGas,clsBLK)
 
     while iExt >= 0 :
 
-        Pr  = eTab[iExt][clsBLK.iPr]
+        Pd  = eTab[iExt][clsBLK.iPr]
+        Rd  = eTab[iExt][clsBLK.iRv]
+        Bd  = eTab[iExt][clsBLK.iBg]
+        Ud  = eTab[iExt][clsBLK.iUg]
+        
         RTp = clsBLK.RT/Pr
 
         dOut = []
@@ -438,6 +504,7 @@ def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
             Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
 
             dRow = [Pr,Bg,Ug]
+            
             dOut.append(dRow)
 
 #-- Decrement jSat counter ------------------------------------------
@@ -455,7 +522,9 @@ def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 
             Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
 
-            dRow = [Pr,Bg,Ug]
+            if jExt == iExt : dRow = [Pd,Bd,Ud,Rd]
+            else            : dRow = [Pr,Bg,Ug]
+            
             dOut.append(dRow)
 
 #-- Decrement jExt counter ------------------------------------------
@@ -464,17 +533,23 @@ def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 
 #== Write BGUST/ZGUST for this sweep ==================================
 
-        outUnderSat(fIMX,"BGUST",dOut,iP,iB,sPrs,sFVF,fPrs,fFVF,clsUNI)
+        Pd  = clsUNI.I2X(Pd,sPrs)
+        sPd = "{:10.3f}".format(Pd)
 
+        fIMX.write("** Pdew = " + sPd +"\n")
+        fIMX.write("\n")
+
+        outUnderSat(fIMX,"BGUST",dOut,iP,iB,sPrs,sFVF,fPrs,fFVF,clsUNI)
         outUnderSat(fIMX,"VGUST",dOut,iP,iU,sPrs,sVis,fPrs,fVis,clsUNI)
 
 #-- Decrement iExt counter ------------------------------------------
 
         iExt -= 1
+        fGas.append(dOut)
 
-#== No return value ===================================================
+#== Return value ======================================================
 
-    return
+    return fGas
 
 #========================================================================
 #  Write a block of BOT/VOT or BGUST/VGUST data

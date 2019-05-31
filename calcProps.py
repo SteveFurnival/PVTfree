@@ -771,15 +771,13 @@ def adjustFC(nP,zP,mP,sP) :
 
     EPS = 1.0E-08
 
-    fC= 0.29
+    fC = 0.29
     dF = 1.0
     iC = 0
 
     while abs(dF) > EPS :
 
-        sM = 0.0
-        sG = 0.0
-        sD = 0.0
+        sM = 0.0 ; sG = 0.0 ; sD = 0.0
 
         for iP in range(nP) :
 
@@ -828,8 +826,7 @@ def matchAllDelta(alfa,dOld,mObs,mSpl,wT,xZ,fCon) :
         zSam = NP.zeros(nSpl)
         fSam = NP.zeros(nSpl)
 
-        for iSpl in range(nSpl) :
-            fSam[iSpl] = fCon[iSam][iSpl]
+        for iSpl in range(nSpl) : fSam[iSpl] = fCon[iSam][iSpl]
 
         aSam = alfa[iSam]
         dSam = dOld[iSam]
@@ -837,8 +834,7 @@ def matchAllDelta(alfa,dOld,mObs,mSpl,wT,xZ,fCon) :
 
         dNew,zS = matchOneDelta(aSam,dSam,mSam,xZ,wT,fSam,mSpl,zSam)
 
-        for iSpl in range(nSpl) :
-            zSpl[iSam][iSpl] = zSam[iSpl]
+        for iSpl in range(nSpl) : zSpl[iSam][iSpl] = zSam[iSpl]
 
     return dNew,zSpl
 
@@ -1043,7 +1039,7 @@ def eosCoefs1C(ACon,BEoS,tRed,AcnF,clsEOS) :
     E2 =  clsEOS.n3*BEoS - 1.0
     E1 = -E0 - E2 - 1.0 + AEoS
 
-    nRoot,eLiq,eVap = CE.solveCubic(BEoS,E2,E1,E0)
+    nRoot,eLiq,eVap = CE.solveCubic(E2,E1,E0)
 
     #print("adjustAF: nR,eS,eL {:1d} {:8.5f} {:8.5f}".format(nRoot,eLiq,eVap))
 

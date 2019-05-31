@@ -856,6 +856,10 @@ def readDef(clsIO,dicSAM,clsUNI) :
         for iC in range(nComp) :
             zI = sumT*dicSAM[iSamp].gZI(iC)
             dicSAM[iSamp].sZI(iC,zI)
+
+#== Back-calculate the C7+ Properties =================================
+
+    backCalcPlusFracProps(clsEOS,dicSAM)
             
 #========================================================================
 #  Do we need to sort the components?  Most to Least Volatility
@@ -886,6 +890,48 @@ def readDef(clsIO,dicSAM,clsUNI) :
 #== Return values =====================================================    
 
     return iERR,clsEOS,dicSAM
+
+#========================================================================
+#  From Full DEF, back-calculate the Plus Fraction Properties
+#========================================================================
+
+def backCalcPlusFracProps(clsEOS,dicSAM) :
+
+    nCom = clsEOS.NC
+    nSam = len(dicSAM)
+
+#== For each sample ===================================================    
+
+    for iSam in range(nSam) :
+
+        clsSAM = dicSAM[iSam]
+
+        zPlus = 0.0 ; mPlus = 0.0 ; sPlus = 0.0
+
+#-- For components with Mw > C(6.5) ---------------------------------        
+
+        for iC in range(nCom) :
+
+            Mw = clsEOS.gPP("MW",iC) ; SG = clsEOS.gPP("SG",iC)
+
+            if Mw > 90.0 :
+
+                ZI    = clsSAM.gZI(iC)
+                zPlus = zPlus + ZI
+                mPlus = mPlus + ZI*Mw
+                sPlus = sPlus + ZI*Mw/SG
+
+#-- SG by inverse weighting -----------------------------------------                
+
+        sPlus = mPlus/sPlus ; mPlus = mPlus/zPlus
+
+        clsSAM.mPlus = mPlus
+        clsSAM.sPlus = sPlus
+        clsSAM.aPlus = 1.0      #-- Default value for ALPHA (info lost)
+
+#== No return values ==================================================
+
+    return
 
 #========================================================================
 #  Machine Epsilon

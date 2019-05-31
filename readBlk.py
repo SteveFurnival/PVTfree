@@ -47,6 +47,7 @@ class classBLK :
     def setTuni(self,Tuni)     : self.tResU = Tuni
 
     def setSample(self,sNum)   : self.sNum  = sNum
+    def setSamNam(self,sNam)   : self.sNam  = sNam
 
     def setRT(self,RT)         : self.RT    = RT
 
@@ -73,7 +74,6 @@ class classBLK :
     def setSimType(self,tSim)  : self.tSim  = tSim
     def setOilKeyW(self,oTyp)  : self.oTyp  = oTyp
     def setGasKeyW(self,gTyp)  : self.gTyp  = gTyp
-    #def setCMGtype(self,cmgT)  : self.cmgT  = cmgT
 
     def setPsepUni(self,pSepU) : self.pSepU = pSepU
     def setTsepUni(self,tSepU) : self.tSepU = tSepU
@@ -273,6 +273,7 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
                 oTyp      = argsIMEX(tokS)
                 clsBLK.setSimType("CMG")
                 clsBLK.setOilKeyW(oTyp)
+                clsBLK.setGasKeyW("")
             elif uTyp[:1] == "V" or uTyp[:1] == "N" :   #-- VIP or Nexus
                 oTyp,gTyp = argsVIP(tokS)
                 clsBLK.setSimType("VIP")
