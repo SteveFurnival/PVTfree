@@ -1,0 +1,369 @@
+
+--=======================================================================
+--  EOS PVT Program
+--  Steve Furnival, HoBoil Limited, Banchory, September 2018
+--=======================================================================
+
+--======================================================================
+-- Initialisation
+--======================================================================
+
+INIT
+
+--DEBUG
+--  ENV    1
+--  TSAT   1
+--ENDDEB
+
+EOS  PR
+
+-- Split Plus Fraction [C7+] into 3 Pseudo-Components
+
+SPLIT    3
+
+-- Have 2 samples, one Gas Condensate (from Gas Cap) and one Volatile Oil (from Oil Rim)
+
+SAMPLES  GasCon VolOil
+MW       134.6  233.5
+SG       0.7725 0.8441
+ALPHA    1.0    1.0
+N2        0.867  0.378
+CO2       1.581  1.201
+C1       79.676 53.528
+C2        7.318  7.256
+C3        2.859  3.897
+IC4       0.409  0.621
+NC4       1.144  1.715
+IC5       0.355  0.610
+NC5       0.515  0.924
+C6        0.620  1.375
+C7+       4.656 28.495
+
+ENDINIT
+
+--STOP
+
+--======================================================================
+-- Experiments
+--======================================================================
+
+EXP
+
+CCE
+  samp GasCon  Tres 239.0 degF Sliq DEW
+WEIG  VISG 0.0  PSAT  10.0
+PLOT          Yes       Yes       Yes     No
+      PRES    RELV      ZFAC      SLIQ    VISG
+      psia    dim       dim       perc    cP
+      7010    0.8030    1.1966    0.00    0.0390
+      6714    0.8179    1.1674    0.00    0.0379
+      6419    0.8343    1.1385    0.00    0.0369
+      6125    0.8525    1.1101    0.00    0.0358
+      5832    0.8726    1.0819    0.00    0.0347
+      5538    0.8957    1.0544    0.00    0.0335
+      5240    0.9220    1.0271    0.00    0.0323
+      4949    0.9516    1.0011    0.00    0.0311
+      4657    0.9862    0.9764    0.00    0.0299
+PSAT  4554    1.0000    0.9682    0.00    0.0294
+      4511    1.0059    0.0       0.13    0.0
+      4360    1.0278    0.0       0.50    0.0
+      4064    1.0802    0.0       1.64    0.0
+      3775    1.1437    0.0       2.89    0.0
+      3340    1.2630    0.0       4.46    0.0
+      2899    1.4322    0.0       5.85    0.0
+      2461    1.6730    0.0       6.62    0.0
+      2022    2.0350    0.0       7.11    0.0
+      1864    2.2250    0.0       7.22    0.0
+      1474    2.8081    0.0       7.27    0.0
+      1170    3.6004    0.0       7.20    0.0
+
+CVD
+  samp GasCon  Tres 239.0 degF
+PLOT            Yes     Yes      Yes  
+      PRES      MREM    SLIQ     ZFAC
+      PSIA      perc    perc     dim
+PSAT  4554.2     0.00    0.00    0.968
+      4207.5     5.46    0.99    0.945
+      3640.4    15.65    3.06    0.915
+      2918.1    30.48    4.80    0.896
+      2323.5    44.11    5.49    0.895
+      1747.7    57.56    5.54    0.906
+      1171.9    71.39    5.32    0.925
+       597.6    84.71    4.88    0.953
+        14.5    98.00    3.93    0.000
+
+CCE
+  samp VolOil  Tres 120.0 degC  sliq DEW
+PLOT           Yes  
+      PRES     RELV
+      bara     dim    
+      452.8    0.9700
+      427.3    0.9739
+      402.3    0.9788
+      377.0    0.9843
+      351.7    0.9904
+      326.4    0.9963
+PSAT  313.0    1.0000
+      301.6    1.0100
+      291.4    1.0206
+      276.5    1.0377
+      251.2    1.0729
+      225.9    1.1189
+      200.9    1.1792
+      176.3    1.2618
+      150.9    1.3776
+      125.6    1.5543
+      100.3    1.8307
+       81.2    2.1685
+
+DLE
+  samp VolOil Tres 120.0 degC
+WEIG  PSAT 10.0  BG  0.0  BT  0.0  
+PLOT          Yes      Yes      No       Yes     No  
+      PRES    BO       GOR      BG       DENO    BT
+      bara    rm3/sm3  sm3/sm3  rm3/sm3  kg/m3   rm3/sm3
+      452.8   1.658      0.0    0.0      663.4    0.0
+      427.3   1.664      0.0    0.0      660.7    0.0
+      402.3   1.673      0.0    0.0      657.5    0.0
+      377.0   1.682      0.0    0.0      653.8    0.0
+      351.7   1.693      0.0    0.0      649.8    0.0
+      326.4   1.703      0.0    0.0      645.9    0.0
+PSAT  313.0   1.709    221.4    0.0      643.5    1.709
+      292.7   1.662    200.6    4.49E-03 649.3    1.758
+      261.7   1.590    174.0    4.92E-03 662.4    1.836
+      221.5   1.515    145.5    5.70E-03 678.2    1.964
+      181.5   1.447    118.8    6.85E-03 693.3    2.150
+      141.3   1.383     93.5    8.80E-03 709.0    2.465
+      101.2   1.323     71.5    1.24E-02 726.5    3.051
+       61.2   1.271     49.5    2.10E-02 740.0    4.513
+       30.9   1.229     32.2    4.27E-02 751.6    8.049
+        1.0   1.097      0.0    0.0      783.6    0.0
+      
+SEP
+  samp VolOil
+PLOT                  No       No       No      No
+      TEMP    PRES    GOR      BO       DENO    GGRV   LSEP  VSEP
+      degC    bara    sm3/sm3  rm3/sm3  kg/m3   dim    stg#  stg#
+PSAT  120.0   313.0   187.6    1.560    656.9   0.0    1     1
+       89.0    12.0   180.5    1.100    784.8   0.760  2     0
+       93.0     2.5     0.0    1.071    797.6   0.0    3     0
+       15.0     1.01    0.0    1.000    853.9   0.0    0     0
+       
+-- Plot none of the experiments/observations
+
+PLOT NONE
+       
+ENDEXP
+
+--======================================================================
+-- Regression: Experiments to include & variables required
+--======================================================================
+
+REG
+
+--DEBUG
+--  REG  1
+--ENDDEB
+
+EXP  CCE:1  CVD  CCE:2  DLE  SEP
+
+VAR
+  MPLUS  GasCon
+  SPLUS  GasCon
+  APLUS  GasCon
+  MPLUS  VolOil
+  SPLUS  VolOil
+  APLUS  VolOil
+ENDV
+
+ENDREG
+
+--======================================================================
+-- Experiments: Single CCE Experiment with Viscosity Data
+--======================================================================
+
+EXP
+
+CCE
+  samp GasCon  Tres 239.0 degF Sliq DEW
+PLOT          Yes
+      PRES    VISG
+      psia    cP
+      7010    0.0390
+      6714    0.0379
+      6419    0.0369
+      6125    0.0358
+      5832    0.0347
+      5538    0.0335
+      5240    0.0323
+      4949    0.0311
+      4657    0.0299
+PSAT  4554    0.0294
+      4511    0.0
+      4360    0.0
+      4064    0.0
+      3775    0.0
+      3340    0.0
+      2899    0.0
+      2461    0.0
+      2022    0.0
+      1864    0.0
+      1474    0.0
+      1170    0.0
+
+ENDEXP
+
+--======================================================================
+-- Regression: Experiments to include and variables
+--======================================================================
+
+REG
+
+EXP  CCE:3
+
+VAR
+  VCRIT  N2    CO2   C1    C2    C3    IC4   NC4
+  VCRIT  IC5   NC5   C6    C7+P1 C7+P2 C7+P3
+ENDV
+
+ENDREG
+
+--======================================================================
+-- Request Blackoil Output
+--======================================================================
+
+BLACKOIL
+
+-- Perform a CVD on Sample VolOil at 239.0 degF
+
+CVD
+
+  samp    VolOil  Tres   239.0   degF
+  
+-- Using 3-Stage Separator Train with last 
+-- stage at Standard (Stock Tank) Conditions
+  
+  Psep    psia    500.0  120.0   14.7
+  Tsep    degF    100.0   80.0   60.0
+  
+-- Tables from 7000 psia to 1000 psia in 500 psia steps  
+  
+  PRange  psia    Pmax   7000.0  Pmin  1000.0  Pinc  500.0
+  
+-- Want Eclipse-100 (E100) Table Output in Field Units
+
+--SIM    CMG     PVTG    PVT     PVTVO  PVTCOND
+--SIM    CMG     PVTVO
+--SIM    MORE    PVTO    PVTG
+  SIM    VIP     BOOTAB  BOGTAB
+--SIM    ECL     PVTO    PVTG
+  UNITS  FIELD
+  
+-- Brine Properties at Pref = 6750 psia and Salinity of 135,000 PPM  
+
+  WATER  PREF  6750  psia  SALT  135000  PPM
+
+ENDBLACK
+
+--======================================================================
+GROUP
+--======================================================================
+
+-- Reduce Number of Components
+
+-- Will weight the new component properties 
+-- by Sample[1] = GasCon composition
+
+SAMPLE  GasCon
+
+-- NewCom  OldCom
+   C1N2    C1     N2
+   C2C3    C2     C3   CO2
+   C4C6    IC4    NC4  IC5  NC5  C6
+   C7P1    C7+P1
+   C7P2    C7+P2
+   C7P3    C7+P3
+   
+-- Re-run the existing experiments with new fluid description
+
+RUNEXP
+
+--======================================================================
+ENDGROUP
+--======================================================================
+
+--======================================================================
+COMP
+--======================================================================
+
+  UNITS  METRIC
+  
+-- Select Required Simulator by un-commenting (remove dash-dash) 
+-- from one of the four below
+
+-- Note if there is a preceeding BLACKoil section requesting
+-- output for the same simulator, it will be overwritten by choice here
+  
+--SIM    CMG
+  SIM    ECL
+--SIM    MORE
+--SIM    VIP
+  
+  TRES   239.0  degF
+
+-- Brine Properties at Pref = 6750 psia and Salinity of 135,000 PPM  
+
+  WATER  PREF  6750  psia  SALT  135000  PPM
+
+--======================================================================
+ENDCOMP
+--======================================================================
+
+--======================================================================
+EXP
+--======================================================================
+
+SWELL
+samp  VolOil  sinj  GasCon  Tres  120.0  degC
+      MOLE
+      frac
+      0.0
+      0.2
+      0.4
+      0.6
+
+GRAD
+Samp  GasCon  Tres 239.0 degF
+PLOT          Yes     Yes
+      HEIG    PRES    PSAT
+      ft      psia    psia
+      7000.0  5060.0  4250.0
+      7100.0  5072.0     0.0
+      7200.0  5084.0  4350.0
+      7300.0  5096.0     0.0
+      7400.0  5108.0     0.0
+DREF  7500.0  5120.0  4554.0
+      7600.0  5132.0     0.0
+      7700.0  5144.0     0.0
+      7800.0  5156.0  4700.0
+      7900.0  5168.0     0.0
+      8000.0  5180.0  4850.0
+      8100.0  5192.0     0.0
+      8200.0  5204.0  5030.0
+      8300.0  5216.0     0.0
+      8400.0  5228.0     0.0
+      8450.0  5236.0     0.0
+      8500.0  5240.0  4870.0
+      8600.0  5252.0     0.0
+      8700.0  5264.0     0.0
+
+--======================================================================
+ENDEXP
+--======================================================================
+
+--======================================================================
+-- STOP card
+--======================================================================
+
+STOP
+
