@@ -197,7 +197,7 @@ def writeGEM(clsEOS,dicSAM,clsCMP,clsIO,clsUNI) :
 #-- Open the GEM File, if not already open -------------------------
 
     if not clsIO.qGEM :
-        pathGEM = clsIO.patR + ".gem"
+        pathGEM = clsIO.patR.with_suffix(".gem")
         fGEM    = open(pathGEM,'w')
         clsIO.setQGEM(True)
         clsIO.setFGEM(fGEM)
@@ -494,7 +494,7 @@ def writeVIP(clsEOS,dicSAM,clsCMP,clsIO,clsUNI) :
 #-- Open the VIP File, if not already open -------------------------
 
     if not clsIO.qVIP :
-        pathVIP = clsIO.patR + ".vip"
+        pathVIP = clsIO.patR.with_suffix(".vip")
         fVIP    = open(pathVIP,'w')
         clsIO.setQVIP(True)
         clsIO.setFVIP(fVIP)
@@ -685,7 +685,7 @@ def writeMORE(clsEOS,dicSAM,clsCMP,clsIO,clsUNI) :
 #-- Open the MORE File, if not already open ------------------------
 
     if not clsIO.qMOR :
-        pathMOR = clsIO.patR + ".mor"
+        pathMOR = clsIO.patR.with_suffix(".mor")
         fMOR    = open(pathMOR,'w')
         clsIO.setQMOR(True)
         clsIO.setFMOR(fMOR)
@@ -912,7 +912,7 @@ def writeE300(clsEOS,dicSAM,clsCMP,clsIO,clsUNI) :
 #-- Open the E300 File, if not already open ------------------------
 
     if not clsIO.q300 :
-        path300 = clsIO.patR + ".e300"
+        path300 = clsIO.patR.with_suffix(".e300")
         f300    = open(path300,'w')
         clsIO.setQ300(True)
         clsIO.setF300(f300)

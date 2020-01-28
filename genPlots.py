@@ -496,6 +496,8 @@ def underSatOilPlot(simT,fOil,clsBLK,clsUNI) :
 
     sNam = clsBLK.sNam  #-- Sample Name
     OutU = clsBLK.OutU  #-- FLD or MET
+    graphOut = "GraphOut"
+
 
     if OutU == "MET" :
         pUni = "bara"
@@ -516,7 +518,7 @@ def underSatOilPlot(simT,fOil,clsBLK,clsUNI) :
     xLab = "Pressure/[" + pUni + "]"
     yLab = "Oil FVF/["  + BoUn + "]"
 
-    figN = "graphOut/" + simT + "_UnderSatOilFVF.png"
+    figN = graphOut + "/" + simT + "_UnderSatOilFVF.png"
 
 #== Number of Under-Saturated Lines ===================================    
 
@@ -567,7 +569,7 @@ def underSatOilPlot(simT,fOil,clsBLK,clsUNI) :
     titL = simT + " Undersaturated Oil Viscosity for Sample " + sNam
     yLab = "Oil Visc/["  + UoUn + "]"
 
-    figN = "graphOut/" + simT + "_UnderSatOilVisc.png"
+    figN = graphOut + "/"+ simT + "_UnderSatOilVisc.png"
 
 #== Number of Under-Saturated Lines ===================================    
 
@@ -621,6 +623,8 @@ def underSatGasPlot(simT,fGas,clsBLK,clsUNI) :
 
     sNam = clsBLK.sNam  #-- Sample Name
     OutU = clsBLK.OutU  #-- FLD or MET
+    graphOut = "GraphOut"
+
 
     if OutU == "MET" :
         pUni = "bara"
@@ -655,7 +659,7 @@ def underSatGasPlot(simT,fGas,clsBLK,clsUNI) :
     xLab = xTxt        + xUni + "]"
     yLab = "Gas FVF/[" + BgUn + "]"
 
-    figN = "graphOut/" + simT + "_UnderSatGasFVF.png"
+    figN = graphOut + "/" + simT + "_UnderSatGasFVF.png"
 
 #== Number of Under-Saturated Lines ===================================    
 
@@ -706,7 +710,7 @@ def underSatGasPlot(simT,fGas,clsBLK,clsUNI) :
     titL = simT + " Undersaturated Gas Viscosity for Sample " + sNam
     yLab = "Gas Visc/["  + UgUn + "]"
 
-    figN = "graphOut/" + simT + "_UnderSatGasVisc.png"
+    figN = graphOut + "/" + simT + "_UnderSatGasVisc.png"
 
 #== Number of Under-Saturated Lines ===================================    
 
