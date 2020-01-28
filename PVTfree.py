@@ -30,6 +30,7 @@
 
 import os
 import sys
+from pathlib import Path
 
 import numpy      as NP
 
@@ -537,6 +538,7 @@ def checkInputFile() :
 #== Has the rootname been given on the command line? ==================    
 
     nArg = len(sys.argv)
+    print(nArg)
 
     if nArg > 1 :
 
@@ -557,7 +559,7 @@ def checkInputFile() :
 
         rootName = sPlt[0]
 
-        pathR = sPath + rootName
+        pathR = Path(sPath + rootName)
 
     else :
 
@@ -568,14 +570,14 @@ def checkInputFile() :
         rootName = input("Enter the Rootname of the Input File: ")
         
         dPath = os.path.dirname(os.path.realpath(__file__))
-        pathR = dPath + "\\" + rootName
+        pathR = Path(dPath) /rootName
 
 #== Build the File Names ==============================================
         
-    pathInp = pathR + ".dat"
-    pathOut = pathR + ".out"
-    pathSav = pathR + ".sav"
-    
+    pathInp = pathR.with_suffix(".dat")
+    pathOut = pathR.with_suffix(".out")
+    pathSav = pathR.with_suffix(".sav")
+
     if os.path.isfile(pathInp) and os.access(pathInp,os.R_OK) :
         print("checkInputFile: Opened Input File ",pathInp," and is readable")
     else :

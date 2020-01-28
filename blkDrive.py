@@ -55,7 +55,7 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
     if   clsBLK.tSim == "CMG" :
 
         if not clsIO.qIMX :
-            pathIMX = clsIO.patR + ".imex"
+            pathIMX = clsIO.patR.with_suffix(".imex")
             fIMX    = open(pathIMX,'w')
             clsIO.setQIMX(True)
             clsIO.setFIMX(fIMX)
@@ -68,7 +68,7 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
     elif clsBLK.tSim == "MOR" :
 
         if not clsIO.qMOR :
-            pathMOR = clsIO.patR + ".mor"
+            pathMOR = clsIO.patR.with_suffix(".mor")
             fMOR    = open(pathMOR,'w')
             clsIO.setQMOR(True)
             clsIO.setFMOR(fMOR)
@@ -81,7 +81,7 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
     elif clsBLK.tSim == "VIP" :
 
         if not clsIO.qVIP :
-            pathVIP = clsIO.patR + ".vip"
+            pathVIP = clsIO.patR.with_suffix(".vip")
             fVIP    = open(pathVIP,'w')
             clsIO.setQVIP(True)
             clsIO.setFVIP(fVIP)
@@ -94,7 +94,7 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
     elif clsBLK.tSim == "ECL" :
         
         if not clsIO.q100 :
-            path100 = clsIO.patR + ".e100"
+            path100 = clsIO.patR.with_suffix(".e100")
             f100    = open(path100,'w')
             clsIO.setQ100(True)
             clsIO.setF100(f100)

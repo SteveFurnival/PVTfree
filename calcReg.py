@@ -30,7 +30,7 @@ def runRegression(mIter,clsIO,clsEOS0,dicSAM0,dicEXP0,dicREG,qExp,clsUNI) :
 #== Set Output File Name [rootName.reg] ===============================
 
     if not clsIO.qReg :
-        pathReg = clsIO.patR + ".reg"
+        pathReg = clsIO.patR.with_suffix(".reg")
         fReg    = open(pathReg,'w')
         clsIO.setQREG(True)
         clsIO.setFREG(fReg)
