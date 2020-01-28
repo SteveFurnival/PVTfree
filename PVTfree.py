@@ -538,7 +538,6 @@ def checkInputFile() :
 #== Has the rootname been given on the command line? ==================    
 
     nArg = len(sys.argv)
-    print(nArg)
 
     if nArg > 1 :
 
