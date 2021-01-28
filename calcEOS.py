@@ -20,11 +20,13 @@
 
 #!/usr/bin/python3
 
-import numpy      as NP
+import numpy     as NP
 
-import constants  as CO
+import utilities as UT
 
-from math  import acos,copysign,cos,log,sqrt
+from math  import log,sqrt
+
+import calcTest as CT
 
 #========================================================================
 #  Calculate EoS Coefficients and its derivatives
@@ -32,7 +34,7 @@ from math  import acos,copysign,cos,log,sqrt
 
 def calcEoSCoefsT(p,T,x,qT,clsEOS) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
     sqrT = sqrt(T)
 
 #== b => B and a => A conversion ======================================
@@ -52,12 +54,9 @@ def calcEoSCoefsT(p,T,x,qT,clsEOS) :
 #-- Work arrays -----------------------------------------------------    
 
     cI = NP.multiply(x,aI)      #-- Vector!
-    dI = NP.zeros(nCom)
+    dI = NP.dot(clsEOS.LIJ,cI)  #-- Vector where Lij = 1-Kij
 
 #== Lij = 1 - Kij =====================================================
-
-    for iC in range(nCom) :
-        dI[iC] = NP.dot(clsEOS.LIJ[iC,:],cI)
 
     Ai = pByT2*NP.multiply(aI,dI)
     A  = pByT2*     NP.dot(cI,dI)
@@ -72,10 +71,10 @@ def calcEoSCoefsT(p,T,x,qT,clsEOS) :
         tC = 2.0/T
 
         eI = NP.multiply(x,clsEOS.aQ)
-        fI = NP.zeros(nCom)
+        fI = NP.dot(clsEOS.LIJ,eI)
 
-        for iC in range(nCom) :
-            fI[iC] = NP.dot(clsEOS.LIJ[iC,:],eI)
+        #for iC in range(nCom) :
+        #    fI[iC] = NP.dot(clsEOS.LIJ[iC,:],eI)
 
         dAidT = cT*NP.multiply(aI,fI) + cT*NP.multiply(clsEOS.aQ,dI) - tC*Ai
         dAdT  = cT*     NP.dot(cI,fI) + cT*     NP.dot(       eI,dI) - tC*A
@@ -104,7 +103,7 @@ def calcEoSCoefsX(p,T,clsEOS) :
 
 #== Build the Aij Matrix ==============================================
 
-    Aij = bByT2*NP.outer(aI,aI)
+    Aij = pByT2*NP.outer(aI,aI)
     Aij =       NP.multiply(clsEOS.LIJ,Aij)  #-- Lij = 1 - Kij
 
 #== Return the Matrix =================================================
@@ -117,13 +116,11 @@ def calcEoSCoefsX(p,T,clsEOS) :
 
 def calcPhaseFugPTX(iPhs,qP,qT,qX,p,T,X,clsEOS) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
     
 #== Calculate the EoS Coefficients ====================================
 
     A,B,Ai,Bi,dAdT,dAidT = calcEoSCoefsT(p,T,X,qT,clsEOS)
-
-    if qX :          AiJ = calcEoSCoefsX(p,T,clsEOS)
 
 #-- alpha[i] = A[i]/A and beta[i] = B[i]/B --------------------------    
 
@@ -216,6 +213,8 @@ def calcPhaseFugPTX(iPhs,qP,qT,qX,p,T,X,clsEOS) :
 
     if qX :
 
+        AiJ = calcEoSCoefsX(p,T,clsEOS)
+
         EtaAC = EtaA*A
         EtaBC = EtaB*B
 
@@ -292,27 +291,11 @@ def setupSolveCubicD(iLiq,A,B,clsEOS) :
 
     Eta = sortCubicRoots(iLiq,E2,E1,E0,A,B,clsEOS)
 
+    #CT.numCubicSolver(E2,E1,E0,Eta)
+
     dFdE = 3.0*Eta*Eta + 2.0*E2*Eta + E1
 
     return Eta,dFdE
-
-#========================================================================
-#  Calculate d(Eta)/dp
-#========================================================================
-
-def calcdEdP(pRes,A,B,Eta,dFdE,clsEOS) :
-
-    dAdP = A/pRes
-    dBdP = B/pRes
-
-    bWrk = 2.0*clsEOS.n4*B
-
-    EtaA = - Eta/dFdE
-    EtaB = - (clsEOS.n3*Eta*Eta + (bWrk - clsEOS.n3)*Eta - bWrk)/dFdE
-
-    dEdP = EtaA*dAdP + EtaB*dBdP
-
-    return dAdP,dBdP,dEdP
 
 #========================================================================
 #  Sort the Roots of the Cubic EoS
@@ -320,12 +303,9 @@ def calcdEdP(pRes,A,B,Eta,dFdE,clsEOS) :
 
 def sortCubicRoots(iLiq,E2,E1,E0,A,B,clsEOS) :
 
-    nReal,rSmal,rLarg = solveCubic(E2,E1,E0)
-
-    if nReal > 1 and rSmal < 0.0 :
+#== Analytic Soution ==================================================
         
-        nReal = 1
-        rSmal = rLarg
+    nReal,rSmal,rLarg = solveCubic(E2,E1,E0)
 
 #-- Sort Roots Depending on Number/Preferred Type -------------------
 
@@ -338,13 +318,23 @@ def sortCubicRoots(iLiq,E2,E1,E0,A,B,clsEOS) :
             rRoot = rLarg
         else :             #-- Select Root on min-GFE
             ABn5  = clsEOS.n5*(A/B)
-            Bn1   = clsEOS.n1*B
-            Bn2   = clsEOS.n2*B
-            Bm1   =           B - 1.0
-            gSmal = (rSmal + Bm1) - log(rSmal) + ABn5*log((rSmal + Bn2)/(rSmal + Bn1))
-            gLarg = (rLarg + Bm1) - log(rLarg) + ABn5*log((rLarg + Bn2)/(rLarg + Bn2))
+            n1B   = clsEOS.n1* B
+            n2B   = clsEOS.n2* B
+            Bm1   =            B - 1.0
+            gSmal = (rSmal + Bm1) - log(rSmal) + \
+                    ABn5*log((rSmal + n2B)/(rSmal + n1B))
+            gLarg = (rLarg + Bm1) - log(rLarg) + \
+                    ABn5*log((rLarg + n2B)/(rLarg + n1B))
             if gSmal < gLarg : rRoot = rSmal
             else             : rRoot = rLarg
+
+            #print("nReal>1: eSmal,gSaml,eLarg,gLarg {:10.3e} {:10.3e} {:10.3e} {:10.3e}".format(rSmal,gSmal,rLarg,gLarg))
+        
+#== Smallest root -ve => discard in favour of +ve root ================            
+
+    if nReal > 1 and rSmal < 0.0 :
+        nReal = 1
+        rSmal = rLarg
 
     return rRoot
 
@@ -356,13 +346,13 @@ def sortCubicRoots(iLiq,E2,E1,E0,A,B,clsEOS) :
 
 def solveCubic(E2,E1,E0) :
 
-    F2 = E2*CO.Third                  #--  a/3
-    F1 = E1*CO.Third                  #--  b/3
+    F2 = E2*UT.Third                  #--  a/3
+    F1 = E1*UT.Third                  #--  b/3
 
     F22 = F2*F2                       #-- (a/3)^2
 
-    Q = F22 - F1                      #-- Eqn.(5.6.10)
-    R = F22*F2 - 1.5*F2*F1 + 0.5*E0   #-- Eqn.(5.6.10)
+    Q =    F22 - F1                   #-- Eqn.(5.6.10)
+    R = F2*F22 - F1*F2*1.5 + 0.5*E0   #-- Eqn.(5.6.10)
 
 #-- Discriminant ----------------------------------------------------    
 
@@ -372,9 +362,9 @@ def solveCubic(E2,E1,E0) :
     
     if   D > 0.0 :
         
-        argA = abs(R) + sqrt(D)                        #-- Arg of Eqn.(5.6.13)
-        A13  = pow(argA,CO.Third)
-        A    = -copysign(A13,R)                        #-- Eqn.(5.6.15)
+        argA = NP.absolute(R) + NP.sqrt(D)             #-- Arg of Eqn.(5.6.13)
+        A13  = NP.power(argA,UT.Third)
+        A    = -A13*NP.sign(R)                         #-- Eqn.(5.6.15)
         
         if A == 0.0 : B = 0.0                          #-- Eqn.(5.6.16)
         else        : B = Q/A
@@ -388,16 +378,16 @@ def solveCubic(E2,E1,E0) :
         
     elif D < 0.0 :
         
-        sqrtQ = sqrt(Q)
-        theta = acos(R/(Q*sqrtQ))                      #-- Eqn.(5.6.11)
-        cosTh = cos(CO.Third*theta)
+        sqrtQ = NP.sqrt(Q)
+        theta = NP.arccos(R/(Q*sqrtQ))                 #-- Eqn.(5.6.11)
+        cTh13 = NP.cos(UT.Third*theta)
         
-        x1 = -2.0*sqrtQ*cosTh                          #-- Eqn.(5.6.12-x1)
+        x1 = -2.0*sqrtQ*cTh13                          #-- Eqn.(5.6.12-x1)
         
 #-- Next expression have used cos(A-B) = cosA.cosB + sinA.sinB where
 #-- cos(-2.PI/3) = -1/2, sin(-2.PI/3) = -sqrt(3)/2 and sinA = sqrt(1-cosA^2)
 
-        x3 = sqrtQ*(cosTh+sqrt(3.0*(1.0-cosTh*cosTh)))
+        x3 = sqrtQ*(cTh13+NP.sqrt(3.0*(1.0-cTh13*cTh13)))
 
         nR = 3
 
@@ -405,7 +395,7 @@ def solveCubic(E2,E1,E0) :
         
     else :
         
-        sqrtQ = sqrt(Q)
+        sqrtQ = NP.sqrt(Q)
         
         if   R > 0.0 :
             x1 = -2.0*sqrtQ
@@ -466,14 +456,13 @@ def calcdMdw(AF,clsEOS) :
 
     return dMdw
 
-
 #========================================================================
-#  Calculate Key Properties and their Deriavtives
+#  Calculate Key Properties and their Derivatives
 #========================================================================
 
 def calcProps(iLiq,pRes,tRes,X,clsEOS) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
     qT   = False
 
 #-- Calculate EoS Coefficients ----------------------------------------
@@ -489,12 +478,12 @@ def calcProps(iLiq,pRes,tRes,X,clsEOS) :
 #-- 2-Parameter (EoS) Z-Factor (and its p-derivative) & Molar Volume 
 
     ZF2  = Eta  + B
-    Vm2  = ZF2*CO.gasCon*tRes/pRes
+    Vm2  = ZF2*UT.gasCon*tRes/pRes
     dZdp = dEdP + dBdP
 
 #-- Mole Weight and Volume Shift --------------------------------------
 
-    cSI = CO.gasCon*NP.multiply(clsEOS.bI,clsEOS.vS)    #-- Vector!
+    cSI = UT.gasCon*NP.multiply(clsEOS.bI,clsEOS.vS)    #-- Vector!
 
     cS = NP.dot(X,cSI)
     Mw = NP.dot(X,clsEOS.Mw)
@@ -510,7 +499,7 @@ def calcProps(iLiq,pRes,tRes,X,clsEOS) :
 
 #-- 3-Parameter Z-Factor --------------------------------------------
 
-    ZF3 = pRes*Vm3/(CO.gasCon*tRes)
+    ZF3 = pRes*Vm3/(UT.gasCon*tRes)
 
 #-- Compressibility -------------------------------------------------
 
@@ -529,13 +518,29 @@ def calcProps(iLiq,pRes,tRes,X,clsEOS) :
     return Mw,Vm3,den,ZF3,visC,comp,dvdp
 
 #========================================================================
+#  Calculate d(Eta)/dp
+#========================================================================
+
+def calcdEdP(pRes,A,B,Eta,dFdE,clsEOS) :
+
+    dAdP = A/pRes
+    dBdP = B/pRes
+
+    bWrk = 2.0*clsEOS.n4*B
+
+    EtaA = - Eta/dFdE
+    EtaB = - (clsEOS.n3*Eta*Eta + (bWrk - clsEOS.n3)*Eta - bWrk)/dFdE
+
+    dEdP = EtaA*dAdP + EtaB*dBdP
+
+    return dAdP,dBdP,dEdP
+
+#========================================================================
 #  Lohrenz Bray Clark Viscosity [Whitson & Brule, Page 38]
 #  And its derivative (wrt Density)
 #========================================================================
 
 def calcLBCderv(tRes,denS,X,clsEOS) :
-
-    nCom = clsEOS.NC
 
 #-- LBC Correlation Coefficients ------------------------------------    
 
@@ -545,37 +550,42 @@ def calcLBCderv(tRes,denS,X,clsEOS) :
     con3 = -0.040758
     con4 =  0.0093324
 
-#-- Low Pressure Component Viscosities ------------------------------
+#== Vector Calculations from here ... =================================
 
-    muN = 0.0 ; muD = 0.0 ; Tpc = 0.0
-    Ppc = 0.0 ; Vpc = 0.0 ; Mpc = 0.0
+    sqM  = NP.sqrt(       clsEOS.Mw)    #-- sqrt(Mwi)
+    tRed = NP.divide(tRes,clsEOS.Tc)    #-- tRedi = tRes/Tci
 
-    for iC in range(nCom) :
+    TcPow = NP.power(clsEOS.Tc,UT.lbcTcX)   #-- Tci^( 1/6)
+    PcPow = NP.power(clsEOS.Pc,UT.lbcPcX)   #-- Pci^(-2/3)
+    MwPow = NP.power(clsEOS.Mw,UT.lbcMwX)   #-- Mwi^(-1/2)
 
-        Tcrit = clsEOS.gPP("TC",iC)
-        Pcrit = clsEOS.gPP("PC",iC)
-        Vcrit = clsEOS.gPP("VC",iC)
-        molWt = clsEOS.gPP("MW",iC)
+    Xi = 5.35*TcPow*MwPow*PcPow
 
-        tRed = tRes/Tcrit
+    Tpc = NP.dot(X,clsEOS.Tc)   #-- sum[i] xi*Tci
+    Ppc = NP.dot(X,clsEOS.Pc)   #-- sum[i] xi*Pci
+    Vpc = NP.dot(X,clsEOS.Vc)   #-- sum[i] xi*Vci
+    Mpc = NP.dot(X,clsEOS.Mw)   #-- sum[i] xi*Mwi
+    muD = NP.dot(X,sqM)         #-- sum[i] xi*sqrt(Mwi)
 
-        Xi = 5.35*pow(Tcrit,CO.lbcTcX)*pow(molWt,CO.lbcMwX)*pow(Pcrit,CO.lbcPcX)
+    mu1 = 4.58*tRed - 1.67
+    
+    mu1 = NP.where(mu1>0.0,mu1,0.0)     #-- Protect against mu1 < 0.0
+    
+    mu1 = 17.78E-05*NP.power(mu1 ,0.58)
+    mu2 = 34.00E-05*NP.power(tRed,0.94)
 
-        if tRed > 1.5 : muI = 17.78E-05*pow((4.58*tRed-1.67),0.58)
-        else          : muI = 34.00E-05*pow(      tRed      ,0.94)
+    muI = NP.where(tRed>1.5,mu1,mu2)
 
-        muI = muI/Xi
+    muI = NP.divide(muI,Xi)
 
-        muN = muN + X[iC]*sqrt(molWt)*muI
-        muD = muD + X[iC]*sqrt(molWt)
+    smI = NP.multiply(sqM,muI)
 
-        Tpc = Tpc + X[iC]*Tcrit
-        Ppc = Ppc + X[iC]*Pcrit
-        Vpc = Vpc + X[iC]*Vcrit
-        Mpc = Mpc + X[iC]*molWt
+    muN = NP.dot(X,smI)
+
+#== Scalar Calculations from here on ... ============================    
 
     mu0 = muN/muD
-    XiR = 5.35*pow(Tpc,CO.lbcTcX)*pow(molWt,CO.lbcMwX)*pow(Ppc,CO.lbcPcX)
+    XiR = 5.35*pow(Tpc,UT.lbcTcX)*pow(Mpc,UT.lbcMwX)*pow(Ppc,UT.lbcPcX)
     Rpc = Mpc/Vpc
 
     #print("calcLBCvisc: Tpc,Ppc,Vpc,Mpc ",Tpc,Ppc,Vpc,Mpc)
@@ -596,9 +606,249 @@ def calcLBCderv(tRes,denS,X,clsEOS) :
 #== Return function and its derivative ================================    
 
     return visC,dvdR
-                   
+
+#========================================================================
+#  IFT: W&B, Sec.3.5, Eqn.(3.136)
+#========================================================================
+
+def calcIFT(mVL,mVV,x,y,clsEOS) :
+
+    nCom = clsEOS.nComp
+
+#-- Mole Weighted Parachors -----------------------------------------
+
+    gasT = 0.0
+    oilT = 0.0
+
+    for iC in range(nCom) :
+
+        paraC = clsEOS.gPP("PA",iC)
+
+        gasT = gasT + y[iC]*paraC
+        oilT = oilT + x[iC]*paraC
+
+#-- Inverse Molar Volume of Gas & Oil [Vm in gmol/cm3!!] ------------
+
+    gasT = gasT/(62.428*mVV)
+    oilT = oilT/(62.428*mVL)
+
+#-- 1/4-Power of IFT ------------------------------------------------
+
+    IFT14 = oilT - gasT
+
+#== IFT [dyne/cm = mN/m] ==============================================
+
+    IFT = IFT14**4
+
+#== Return IFT ========================================================
+
+    return IFT
+
+#========================================================================
+#  Enthalpy and Specific Heat
+#========================================================================
+
+def calcEnthSpecHeat(iPhs,p,T,x,clsEOS) :
+
+    pByT  =    p/T
+    pByT2 = pByT/T
+
+    RT = UT.btuCon*T
+
+#== Ideal Gas Contributions ===========================================
+
+    CpIdl,HIdl = calcIdealGasTherm(T,x,clsEOS)
+
+#== b & a EoS coeffs (and a-derivatives [1st & 2nd] wrt temperature) ==
+
+    b,a,dadT,d2adT2 = calcEoSCoefsA(p,T,x,clsEOS)
+
+#-- (A,B) Coeffs ----------------------------------------------------
+
+    A = a*pByT2
+    B = b*pByT
+
+#-- Temperature Derivatives -----------------------------------------
+
+    dBdT = -    B/T
+    dAdT = -2.0*A/T + pByT2*dadT
+
+#== Setup and Solve the Cubic EoS =====================================
+
+    Eta,dFdE  = setupSolveCubicD(iPhs,A,B,clsEOS)
+
+#-- d[eta]/dT -------------------------------------------------------
+
+    Eta2 = Eta*Eta
+    bWrk = 2.0*clsEOS.n4*B
+    
+    EtaA = - Eta/dFdE
+    EtaB = - (clsEOS.n3*Eta2 + (bWrk - clsEOS.n3)*Eta - bWrk)/dFdE
+
+    dEdT = EtaA*dAdT + EtaB*dBdT
+
+    dZdT = dEdT + dBdT
+
+#== Assemble Residual Enthalpy ========================================
+
+    sig1 = Eta + clsEOS.n1*B
+    sig2 = Eta + clsEOS.n2*B
+
+    C2 = Eta + B - 1.0
+    C3 = clsEOS.n5*A/B
+    C4 = log(sig2/sig1)
+
+    aD = dadT/a
+
+    C5 = T*aD - 1.0
+
+    HRes  = RT*(C2 + C3*C4*C5)
+
+#== Residual Specific Heat ============================================
+
+    dC2dT =     dEdT   + dBdT
+    dC3dT = C3*(dAdT/A - dBdT/B)  #-- dB/dT = -1/T but leave as-is
+    dC4dT = (dEdT + clsEOS.n2*dBdT)/sig2 - (dEdT + clsEOS.n1*dBdT)/sig1
+
+    dC5dT = aD - T*aD*aD + T*d2adT2/a
+
+    CpRes = HRes/T + RT*(dC2dT + C3*C4*dC5dT + C3*dC4dT*C5 + dC3dT*C4*C5)
+
+#== Total Enthalpy & Specific Heat ====================================
+
+    HTot  = HIdl  + HRes
+    CpTot = CpIdl + CpRes
+
+#== Joule-Thomson Coefficient =========================================
+
+    uJT = RT*T*dZdT/(p*CpTot)
+
+#== Return H & Cp = dH/dT =============================================
+
+    return HTot,CpTot,uJT
+
+#========================================================================
+#  Calculate Ideal Gas Specific Heat and Enthalpy
+#========================================================================
+
+def calcIdealGasTherm(T,x,clsEOS) :
+
+    nCom = clsEOS.nComp
+    Tref = clsEOS.Tref
+
+    T1 = T     ; T2 = T1*T1 ; T3 = T1*T2 ; T4 = T1*T3
+    U1 = Tref  ; U2 = U1*U1 ; U3 = U1*U2 ; U4 = U1*U3
+
+    tA =  T1 - U1      ;  tB = (T2 - U2)/2.0
+    tC = (T3 - U3)/3.0 ;  tD = (T4 - U4)/4.0
+
+#== Assemble sums =====================================================
+
+    CpI = 0.0 ; HId = 0.0
+
+    for iC in range(nCom) :
+        
+        CpA = clsEOS.gPP("CA",iC)
+        CpB = clsEOS.gPP("CB",iC)
+        CpC = clsEOS.gPP("CC",iC)
+        CpD = clsEOS.gPP("CD",iC)
+
+        CpT = CpA    + CpB*T1 + CpC*T2 + CpD*T3
+        HIT = CpA*tA + CpB*tB + CpC*tC + CpD*tD
+
+        CpI = CpI + x[iC]*CpT
+        HId = HId + x[iC]*HIT        
+
+    return CpI,HId
+
+#========================================================================
+#  b, a, da/dT & d2a/dT2 (for Enthalpy/Specific Heat)
+#========================================================================
+
+def calcEoSCoefsA(p,T,x,clsEOS) :
+
+    nCom = clsEOS.nComp
+    sqrT = sqrt(T)
+
+#== b-Coefficient =====================================================
+
+    b = NP.dot(x,clsEOS.bI)
+
+#== Sub-terms =========================================================
+
+    pI = NP.multiply(x,clsEOS.aP)
+    qI = NP.multiply(x,clsEOS.aQ)
+
+    #sI = NP.zeros(nCom)
+    #tI = NP.zeros(nCom)
+
+    #for iC in range(nCom) :
+    #    sI[iC] = NP.dot(clsEOS.LIJ[iC,:],pI)
+    #    tI[iC] = NP.dot(clsEOS.LIJ[iC,:],qI)
+
+    sI = NP.dot(clsEOS.LIJ,pI)
+    tI = NP.dot(clsEOS.LIJ,qI)
+
+    aT1 = NP.dot(pI,sI)
+    aT2 = NP.dot(pI,tI)
+    aT3 = NP.dot(qI,tI)
+
+#== a and its first/second derivative wrt Temperature =================    
+
+    a      = aT1 + aT2* sqrT + aT3*T
+    dadT   =       aT2/ sqrT + aT3
+    d2adT2 = - 0.5*aT2/(sqrT*T)
+
+#== Return values =====================================================
+
+    return b,a,dadT,d2adT2
+
+#========================================================================
+#  Cubic Newton
+#========================================================================
+
+def cubicNewton(eta,E2,E1,E0) :
+
+    D2 = 2.0*E2         #-- Work Scalar for 1st/2nd Derivative
+
+#-- Function, 1st & 2nd Derivatives at current estimate -------------    
+
+    f0 = cub0(eta,E2,E1,E0) ; f1 = cub1(eta,D2,E1) ; f2 = cub2(eta,D2)
+    
+#-- Halley-Newton [3rd Order] Update --------------------------------        
+        
+    nCub = 1
+    dNew =    f0/ f1
+    dHal = dNew/(1.0 - 0.5*dNew*f2/f1)
+
+#----------------------------------------------------------------------
+#  Iterate
+#----------------------------------------------------------------------
+
+    while abs(dHal) > 1.0E-15 :
+
+        #print("nCub,eta,f0,f1,f2,dHal {:2d} {:12.5e} {:12.5e} {:12.5e} {:12.5e} {:12.5e}".format(nCub,eta,f0,f1,f2,dHal))
+
+        eta  = eta - dHal
+
+        f0 = cub0(eta,E2,E1,E0) ; f1 = cub1(eta,D2,E1) ; f2 = cub2(eta,D2)
+
+        nCub += 1
+        dNew =   f0/ f1
+        dHal = dNew/(1.0 - 0.5*dNew*f2/f1)
+
+#== Return solution ===================================================
+
+    return eta,nCub
+
+#========================================================================
+#  Cubic Function and Derivatives; note D2 = 2*E2 in 1st & 2nd Derv
+#========================================================================
+
+def cub0(eta,E2,E1,E0) : return E0 + eta*(E1 + eta*(E2 + eta))
+def cub1(eta,D2,E1   ) : return           E1 + eta*(D2 + eta*3.0)
+def cub2(eta,D2      ) : return                     D2 + eta*6.0
+
 #========================================================================
 #  End of Module
 #========================================================================
-
-

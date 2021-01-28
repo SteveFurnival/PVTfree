@@ -20,14 +20,13 @@
 
 #!/usr/bin/python3
 
-import numpy        as NP
+import numpy     as NP
 
-import calcEOS      as CE
-import constants    as CO
-import calcReg      as CR
-import calcTest     as CT
-import stabTest     as ST
-import writeOut     as WO
+import calcEOS   as CE
+import calcReg   as CR
+import calcStab  as CS
+import utilities as UT
+import writeOut  as WO
 
 #========================================================================
 #  2-Phase Flash
@@ -41,7 +40,7 @@ def calcFlash(pRes,tRes,Z,vEst,clsEOS,clsIO) :
     else                      :
         qDeb = False
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
     #mFLS = 101
     mFLS = 13           #-- SS/GDEM for max-13 steps, then BFGS
     qSat = False
@@ -56,7 +55,7 @@ def calcFlash(pRes,tRes,Z,vEst,clsEOS,clsIO) :
 
 #-- Check if we have an unstable solution at (P,T): get K-Values ----
 
-    iTyp,triV,K = ST.twoSidedStabCheck(qSat,pRes,tRes,Z,clsEOS,clsIO)
+    iTyp,triV,K = CS.twoSidedStabTest(qSat,pRes,tRes,Z,clsEOS,clsIO)
 
     if qDeb :
         sOut = "calcFlash: tRes,pRes,iTyp {:10.3f} {:10.3f} {:2d}\n".format(tRes,pRes,iTyp)
@@ -153,7 +152,7 @@ def calcFlash(pRes,tRes,Z,vEst,clsEOS,clsIO) :
 
             lstG = gfe2  #-- Store 'last' GFE in case GDEM makes increase
 
-            if icSS % CO.mGDEM2 > 0 :
+            if icSS % UT.mGDEM2 > 0 :
                 qPro = False
                 logK = logK + res0    #-- W&B Eqn.(4.48)
                 K    = NP.exp(logK)
@@ -218,8 +217,10 @@ def calcGFE2(pRes,tRes,V,X,Y,clsEOS) :
 
 #-- Liquid and Vapour Log(Fugacity) Coefficients --------------------
 
-    fugX,dumV,dumV,dumM = CE.calcPhaseFugPTX(iLiq,qP,qT,qX,pRes,tRes,X,clsEOS)
-    fugY,dumV,dumV,dumM = CE.calcPhaseFugPTX(iVap,qP,qT,qX,pRes,tRes,Y,clsEOS)
+    fugX,dumV,dumV,dumM = \
+        CE.calcPhaseFugPTX(iLiq,qP,qT,qX,pRes,tRes,X,clsEOS)
+    fugY,dumV,dumV,dumM = \
+        CE.calcPhaseFugPTX(iVap,qP,qT,qX,pRes,tRes,Y,clsEOS)
 
 #-- Log Mole Fractions now become 'Chemical Potential' --------------
 
@@ -488,7 +489,7 @@ def solveRR(Z,K,vEst) :
 
 #== Calculate (X,Y) ===================================================
 
-    #print("solveRR: iRR,V = {:2d} {:10.3e}".format(iRR,V))
+    #print("solveRR: iRR,V,vEst = {:2d} {:8.5f} {:8.5f}".format(iRR,V,vEst))
 
     Zc = Z*c        #-- Vector
     cV = c - V      #-- Vector
@@ -563,9 +564,9 @@ def bracketRR(N,Z,d,dP1,aL,aR) :
 
 def calcFlashBFGS(pRes,tRes,Z,V,X,Y,clsEOS) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
     mFLS = 21
-    mEPS = CO.macEPS
+    mEPS = UT.macEPS
 
 #== Alpha or Beta Formalism? ==========================================
 
@@ -784,7 +785,7 @@ def calcBetaBFGS(Z,V,Y) :
 
 def flashFuncDervBFGS(AorB,qAlf,pRes,tRes,Z,clsEOS) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
 
     qP = False      #-- Don't need P, T or X LogPhi Derivatives
     qT = False
@@ -916,7 +917,7 @@ def molNumToMolFrac(V,niL,niV) :
 
 def lineSearchFlash(kBFGS,qAlf,pRes,tRes,Z,fun0,aOld,dAlf,Grad,clsEOS) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
 
     aNew = NP.zeros(nCom)
 

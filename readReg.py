@@ -9,51 +9,10 @@
 
 #!/usr/bin/python3
 
+import allData  as AD
 import calcReg  as CR
 import readGen  as RG
 import readExps as RX
-
-#========================================================================
-#  Regression Variable Class
-#========================================================================
-
-class classREG :
-
-    def __init__(self,vNam) :
-        
-        self.vNam = vNam
-
-        if   vNam == "TCRIT" or vNam == "PCRIT" or vNam == "ACENF" or \
-             vNam == "SHIFT" or vNam == "MULTA" or vNam == "MULTB"    :
-            self.vTyp = "REG"
-            self.vMin =  0.7
-            self.vMax =  1.3
-        elif vNam == "VCRIT" :
-            self.vTyp = "LBC"
-            self.vMin =  0.5
-            self.vMax =  1.5
-        elif vNam == "KIJ" :
-            self.vTyp = "KIJ"
-            self.vMin = -2.0
-            self.vMax =  2.0
-        elif vNam == "MPLUS" or vNam == "SPLUS" :
-            self.vTyp = "PLS"
-            self.vMin =  0.9
-            self.vMax =  1.1
-        elif vNam == "APLUS" :
-            self.vTyp = "PLS"
-            self.vMin =  0.5
-            self.vMax =  2.5
-        else :
-            self.vTyp = "ERR"
-
-    def setRegKIJone(self,vOne) : self.vOne = vOne
-
-    def setRegSamp(self,vSam)   : self.vSam = vSam
-
-    def setRegGroup(self,vGrp)  :
-        self.vGrp = []
-        self.vGrp = vGrp
 
 #========================================================================
 #  Read the Data between REG and ENDREG
@@ -86,9 +45,9 @@ def readReg(clsIO,clsEOS,dicSAM,dicEXP,clsUNI) :
     iERR  = 0
     iLine = 0
 
-    fInP = clsIO.fInP
+    fInp = clsIO.fInp
 
-    for curL in fInP :
+    for curL in fInp :
 
         iLine += 1
 
@@ -139,6 +98,11 @@ def readReg(clsIO,clsEOS,dicSAM,dicEXP,clsUNI) :
             iERR = RG.readDebug(clsIO)
             if iERR < 0 : break
 
+        elif tokS[0][:3].upper() == "OPT" :
+
+            iERR = RG.readOption(clsIO)
+            if iERR < 0 : break
+
         elif tokS[0][:4].upper() == "ENDR" :
             #print("ENDREG k/w found")
             break
@@ -162,8 +126,11 @@ def readReg(clsIO,clsEOS,dicSAM,dicEXP,clsUNI) :
 
         print("readReg: Of Which ",nAct," Experiments Are Active")
 
+        #clsEOS,dicSAM,dicEXP = \
+        #    CR.runRegression(mIter,qExp,clsEOS,dicSAM,dicEXP,dicREG,clsUNI,clsIO)
+
         clsEOS,dicSAM,dicEXP = \
-            CR.runRegression(mIter,clsIO,clsEOS,dicSAM,dicEXP,dicREG,qExp,clsUNI)
+            CR.runRegression(mIter,qExp,clsEOS,dicSAM,dicEXP,dicREG,clsUNI,clsIO)
 
 #== Return values =====================================================
 
@@ -185,9 +152,9 @@ def readRegVars(clsIO,dicREG,dicSAM,clsEOS) :
 
     nVar  = 0
 
-    fInP = clsIO.fInP
+    fInp = clsIO.fInp
 
-    for curL in fInP :
+    for curL in fInp :
 
         iLine += 1
 
@@ -198,12 +165,16 @@ def readRegVars(clsIO,dicREG,dicSAM,clsEOS) :
 
         tokS = curL.split()
         nTok = len(tokS)
+        qVar = True
 
-        if   nTok                == 0       : pass  #-- Blank line!
-        elif tokS[0][:2]         == "--"    : pass  #-- Comment!
-        elif tokS[0][:4].upper() == "ENDV"  : break
+        if   nTok                == 0       :
+            qVar = False                         #-- Blank line!
+        elif tokS[0][:2]         == "--"    :
+            qVar = False                         #-- Comment!
+        elif tokS[0][:4].upper() == "ENDV"  :
+            break
         else :
-            
+
             sTyp = tokS[0].upper()
             
             if   sTyp == "TCRIT" or sTyp == "PCRIT" or sTyp == "ACENF" or \
@@ -218,7 +189,7 @@ def readRegVars(clsIO,dicREG,dicSAM,clsEOS) :
                     iERR = -1
                     break
                 else :
-                    clsREG = classREG(sTyp)
+                    clsREG = AD.classREG(sTyp)
                     clsREG.setRegGroup(iComs)
                 
             elif sTyp == "KIJ" :
@@ -239,7 +210,7 @@ def readRegVars(clsIO,dicREG,dicSAM,clsEOS) :
                     iERR = -1
                     break
                 else :
-                    clsREG = classREG(sTyp)
+                    clsREG = AD.classREG(sTyp)
                     clsREG.setRegKIJone(iOne)
                     clsREG.setRegGroup(iComs)
                 
@@ -247,13 +218,13 @@ def readRegVars(clsIO,dicREG,dicSAM,clsEOS) :
                 
                 sName = tokS[1]                 #-- Sample Name
                 iSamp = checkSamp4Reg(sName,dicSAM)
-                
+
                 if iSamp < 0 :
                     print(sTyp," Sample Name ",sName," Not Previously Defined - Error")
                     iERR = -1
                     break
                 else :
-                    clsREG = classREG(sTyp)
+                    clsREG = AD.classREG(sTyp)
                     clsREG.setRegSamp(iSamp)
 
             elif sTyp[:3] == "LBC" :
@@ -268,22 +239,22 @@ def readRegVars(clsIO,dicREG,dicSAM,clsEOS) :
 
 #-- Increment the number of variables -------------------------------            
 
-            if not qLBC : nVar += 1            
+            if not qLBC and qVar : nVar += 1            
 
-#== And add this variable to the dictionary of variables ==============            
-            
-        if not qLBC : dicREG[nVar-1] = clsREG
+#== And add this variable to the dictionary of variables ==============
+
+        if not qLBC and qVar : dicREG[nVar-1] = clsREG
 
 #== LBC Special =======================================================
 
     if qLBC :
 
-        clsREG = classREG("VCRIT")
+        clsREG = AD.classREG("VCRIT")
         clsREG.setRegGroup(iLow)
                     
         dicREG[nVar  ] = clsREG
 
-        clsREG = classREG("VCRIT")
+        clsREG = AD.classREG("VCRIT")
         clsREG.setRegGroup(iHig)
                     
         dicREG[nVar+1] = clsREG        
@@ -321,21 +292,29 @@ def procExistExp(dicEXP) :
         rExp[iExp] = xTyp
         
         if   xTyp == "CCE" :
-            nCCE += 1 ; rExp[iExp] = xTyp + ":" + str(nCCE)
+            nCCE += 1
+            rExp[iExp] = xTyp + ":" + str(nCCE)
         elif xTyp == "CVD" :
-            nCVD += 1 ; rExp[iExp] = xTyp + ":" + str(nCVD)
+            nCVD += 1
+            rExp[iExp] = xTyp + ":" + str(nCVD)
         elif xTyp == "DLE" :
-            nDLE += 1 ; rExp[iExp] = xTyp + ":" + str(nDLE)
+            nDLE += 1
+            rExp[iExp] = xTyp + ":" + str(nDLE)
         elif xTyp == "SEP" :
-            nSEP += 1 ; rExp[iExp] = xTyp + ":" + str(nSEP)
+            nSEP += 1
+            rExp[iExp] = xTyp + ":" + str(nSEP)
         elif xTyp == "FLS" :
-            nFLS += 1 ; rExp[iExp] = xTyp + ":" + str(nFLS)
+            nFLS += 1
+            rExp[iExp] = xTyp + ":" + str(nFLS)
         elif xTyp == "SAT" :
-            nSAT += 1 ; rExp[iExp] = xTyp + ":" + str(nSAT)
+            nSAT += 1
+            rExp[iExp] = xTyp + ":" + str(nSAT)
         elif xTyp == "SWL" :
-            nSWL += 1 ; rExp[iExp] = xTyp + ":" + str(nSWL)
+            nSWL += 1
+            rExp[iExp] = xTyp + ":" + str(nSWL)
         elif xTyp == "GRD" :
-            nGRD += 1 ; rExp[iExp] = xTyp + ":" + str(nGRD)
+            nGRD += 1
+            rExp[iExp] = xTyp + ":" + str(nGRD)
 
 #== Only one of a given type ==========================================            
 
@@ -364,7 +343,7 @@ def checkSamp4Reg(sName,dicSAM) :
     nSamp = len(dicSAM)
 
     for iS in range(nSamp) :
-        sThis = dicSAM[iS].sName
+        sThis = dicSAM[iS].sNam
         if sThis == sName :
             iSamp = iS
             break
@@ -380,10 +359,10 @@ def checkSamp4Reg(sName,dicSAM) :
 def checkComp4Reg(sName,clsEOS) :
 
     iComp = -1
-    nComp = clsEOS.NC
+    nComp = clsEOS.nComp
 
     for iC in range(nComp) :
-        sThis = clsEOS.gPP("CN",iC)
+        sThis = clsEOS.gNM(iC)
         if sThis == sName :
             iComp = iC
             break
@@ -430,19 +409,15 @@ def checkComps4Reg(nMin,comL,clsEOS) :
 
 def setLBCgroups(clsEOS) :
 
-    nCom = clsEOS.NC
-
     iLow = []
     iHig = []
 
-    for iC in range(nCom) :
+    for iC in range(clsEOS.nComp) :
 
         Mw = clsEOS.gPP("MW",iC)
 
-        if Mw < 60.0 :
-            iLow.append(iC)
-        else :
-            iHig.append(iC)
+        if Mw < 60.0 : iLow.append(iC)
+        else         : iHig.append(iC)
 
 #== Return Groups =====================================================
 

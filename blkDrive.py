@@ -25,6 +25,7 @@ import numpy     as NP
 import blkE100   as B1
 import blkCoefs  as BC
 import blkRegEOS as BE
+import blkGrad   as BG
 import blkIMEX   as BI
 import blkMORE   as BM
 import blkVIP    as BN
@@ -34,12 +35,12 @@ import blkRegVis as BV
 
 import calcEOS   as CE
 import calcFlash as CF
-import constants as CO
 import calcReg   as CR
 import calcSat   as CS
 import calcWater as CW
 import readExps  as RX
 import utilities as UT
+import writeBlk  as WB
 import writeOut  as WO
 
 from math import exp,log
@@ -48,11 +49,13 @@ from math import exp,log
 #  Driver for Blackoil Table Calculations
 #=======================================================================
 
-def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
+def calcBlack(clsEOS,dicSAM,clsBLK,clsUNI,clsIO) :
+
+    sim3 = clsBLK.tSim[:3]
 
 #== Set Output File Name [rootName.sim] ===============================
 
-    if   clsBLK.tSim == "CMG" :
+    if   sim3 == "CMG" :
 
         if not clsIO.qIMX :
             pathIMX = clsIO.patR + ".imex"
@@ -65,7 +68,7 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
         fSim = clsIO.fIMX
         sCom = "**"
         
-    elif clsBLK.tSim == "MOR" :
+    elif sim3 == "TEM" :
 
         if not clsIO.qMOR :
             pathMOR = clsIO.patR + ".mor"
@@ -78,7 +81,7 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
         fSim = clsIO.fMOR
         sCom = "--"
         
-    elif clsBLK.tSim == "VIP" :
+    elif sim3 == "VIP" :
 
         if not clsIO.qVIP :
             pathVIP = clsIO.patR + ".vip"
@@ -91,15 +94,15 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
         fSim = clsIO.fVIP
         sCom = "C "
         
-    elif clsBLK.tSim == "ECL" :
-        
+    elif sim3 == "ECL" :
+
         if not clsIO.q100 :
             path100 = clsIO.patR + ".e100"
             f100    = open(path100,'w')
             clsIO.setQ100(True)
             clsIO.setF100(f100)
         else :
-            f100 = clsIO.fDep
+            f100 = clsIO.f100
             
         fSim = clsIO.f100
         sCom = "--"
@@ -117,14 +120,15 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
     iLiq =  1    ; iVap = -1
 
     iSam = clsBLK.sNum
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
 
     clsSAM = dicSAM[iSam]
 
     Z = NP.zeros(nCom)
     for iC in range(nCom) : Z[iC] = clsSAM.gZI(iC)
 
-    sNam = dicSAM[iSam].sName ; clsBLK.setSamNam(sNam)  #-- Store the name
+    sNam = dicSAM[iSam].sNam
+    clsBLK.setSamp(iSam,sNam)  #-- Store the name
 
     xTyp = clsBLK.xTyp
     tRes = clsBLK.Tres
@@ -139,10 +143,12 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
     if clsBLK.qVsep : Vsep = clsBLK.Vsep
     else            : Vsep = []
 
+    #print("calcBlack: pSep,tSep,Lsep,Vsep ",pSep,tSep,Lsep,Vsep)
+
 #-- Brine Density at Standard (Stock Tank) Conditions ---------------    
 
-    pStc = CO.pStand    #-- Standard Pressure    [psia]
-    tStc = CO.tStand    #-- Standard Temperature [degR = 60.0 degF]
+    pStc = UT.pStand    #-- Standard Pressure    [psia]
+    tStc = UT.tStand    #-- Standard Temperature [degR = 60.0 degF]
     mFrc = clsBLK.bSalt #-- Mass Fraction of Salt in the Brine
 
     dSTW,comW = CW.calcRoweChouDen(mFrc,tStc,pStc,clsUNI)  #-- Stock Tank Brine Density
@@ -151,7 +157,7 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
 
 #-- Brine Properties at Reference Pressure & Tres (for PVTW keyword) 
 
-    CW.calcPVTW(clsBLK,clsIO,clsUNI)
+    CW.calcPVTW(clsBLK,clsUNI,clsIO)
 
 #======================================================================
 #  Saturation Pressure Stage: Find Psat
@@ -162,7 +168,12 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
 #-- This experiment at varying temperature so set when needed -------
 
     pMea = -1.0
-    qBub,pSat,Ksat = CS.calcPsat(pMea,tRes,clsEOS,clsSAM,clsIO)
+    
+    qBub = None
+    pSat = None
+    logK = NP.empty(nCom)
+    
+    qBub,pSat,Ksat = CS.calcPsat(pMea,tRes,qBub,pSat,logK,clsEOS,clsSAM,clsIO)
 
     clsBLK.Psat = pSat
 
@@ -309,7 +320,7 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
             Vtot = Voil + Vgas
             Vrem = Vtot - Vsat
 
-            zRem = pRes*Vrem/(Zgas*CO.gasCon*tRes)
+            zRem = pRes*Vrem/(Zgas*UT.gasCon*tRes)
 
             if   xTyp == "CCE" :
                 pass
@@ -378,19 +389,19 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
 #  Stock Tank Oil and Gas Properties
 #======================================================================
 
-    mSTO,oGrv = BP.initOilProps(dSTO,clsBLK,clsIO)
-    mSTG,gGrv = BP.initGasProps(dSTG,clsBLK,clsIO)
+    mSTO,oGrv = BP.initOilProps(dSTO,clsBLK)
+    mSTG,gGrv = BP.initGasProps(dSTG,clsBLK)
 
     clsBLK.mSTO = mSTO
     clsBLK.mSTG = mSTG
 
-    cCon = (dSTO/mSTO)*(CO.gasCon*CO.tStand/CO.pStand)  #-- Singh et al Eqn.(14)
+    cCon = (dSTO/mSTO)*(UT.gasCon*UT.tStand/UT.pStand)  #-- Singh et al Eqn.(14)
 
     clsBLK.Co = cCon
 
 #== Output Header =====================================================    
 
-    WO.outputHeaderBO(fSim,iSam,sNam,clsBLK,clsIO,clsUNI)
+    WB.outputHeaderBO(fSim,iSam,sNam,clsBLK,clsIO,clsUNI)
 
 #======================================================================
 #  Generate the Saturated Oil and Gas STO Mole Fractions
@@ -404,14 +415,14 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
         Rs = dTab[iPrs][clsBLK.iRs] ; Bo = dTab[iPrs][clsBLK.iBo]
         Rv = dTab[iPrs][clsBLK.iRv] ; Bg = dTab[iPrs][clsBLK.iBg]
 
-        denO = BP.denOil(dSTO,dSTG,Rs,Bo,clsIO)
-        denG = BP.denGas(dSTO,dSTG,Rv,Bg,clsIO)
+        denO = BP.denOil(dSTO,dSTG,Rs,Bo)
+        denG = BP.denGas(dSTO,dSTG,Rv,Bg)
 
         xLiq = cCon/(cCon +     Rs)
         yLiq = cCon/(cCon + 1.0/Rv)
 
-        Mliq = BP.phaseMw(mSTG,mSTO,xLiq,clsIO)
-        Mvap = BP.phaseMw(mSTG,mSTO,yLiq,clsIO)
+        Mliq = BP.phaseMw(mSTG,mSTO,xLiq)
+        Mvap = BP.phaseMw(mSTG,mSTO,yLiq)
 
         Vliq = Mliq/denO
         Vvap = Mvap/denG
@@ -430,9 +441,11 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
     qMonV = BP.oilViscMono(dTab,clsBLK)
     qMonC = BP.oilCompMono(dTab,clsBLK)
 
+    #print("calcBlack: qMonv,qMonC ",qMonV,qMonC)
+
 #== Initialise Extension Method =========================================        
 
-    clsBLK.RT = CO.gasCon*tRes     #-- RT
+    clsBLK.RT = UT.gasCon*tRes     #-- RT
 
     nEOS = clsBLK.nEOS
 
@@ -459,11 +472,11 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
 
     BO.setEoSVis(0,sOil,sGas,rOil,rGas,clsBLK)
     
-    pCon = BO.convPressure(dTab,clsBLK,clsIO)
+    pCon = BO.convPressure(dTab,clsBLK)
 
     if pCon < pMax : pCon = pMax
 
-    KoSat,KgSat,mO,mG = BO.extendTable(pSat,pCon,dTab,clsBLK,clsIO)
+    KoSat,KgSat,mO,mG = BO.extendTable(pSat,pCon,dTab,clsBLK)
 
     RsMax,RvMax = BO.calcRsRv(cCon,pCon,pSat,KoSat,KgSat,mO,mG)
 
@@ -482,17 +495,18 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
             
             Rs,Rv = BO.calcRsRv(cCon,pRes,pSat,KoSat,KgSat,mO,mG)
             
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rs ,clsBLK,clsIO)
-            Co,Vo = BO.calcComp(qLiq,RTp,cCon,dSTO,dSTG,Rs,Bo,Uo,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rs ,clsBLK)
+            Co,Vo = BO.calcComp(qLiq,RTp,cCon,dSTO,dSTG,Rs,Bo,Uo,clsBLK)
 
-            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv ,clsBLK,clsIO)
-            Bd,Ud = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,0.0,clsBLK,clsIO)
+            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv ,clsBLK)
+            Bd,Ud = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,0.0,clsBLK)
 
 #-- For condensates, Uo can go astray -------------------------------
 
-            if Uo > uLst : Uo = clsBLK.UoI*exp(Rs*clsBLK.UoS)
+            if Uo > uLst : Ux = clsBLK.UoI*exp(Rs*clsBLK.UoS)
+            Uo   = Ux
             uLst = Uo
-            
+
             eRow = [pRes,Rs,Bo,Uo,Co,Vo,Rv,Bg,Ug,Bd,Ud]
             eTab.append(eRow)
 
@@ -500,14 +514,28 @@ def calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI) :
 #  Oil and Gas Output depends on Simulator Type
 #========================================================================
 
-    if   clsBLK.tSim == "MOR" :
+    qDep = clsBLK.qDep
+
+    if   sim3 == "TEM" :
         BM.outMORE(fSim,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
-    elif clsBLK.tSim == "CMG" :
+        if not qDep : clsIO.qMOR = UT.closeFile(fSim)
+    elif sim3 == "CMG" :
         BI.outIMEX(fSim,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
-    elif clsBLK.tSim == "VIP" :
+        if not qDep : clsIO.qIMX = UT.closeFile(fSim)
+    elif sim3 == "VIP" :
         BN.outVIP( fSim,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
+        if not qDep : clsIO.qVIP = UT.closeFile(fSim)
     else :
         B1.outE100(fSim,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
+        if not qDep : clsIO.q100 = UT.closeFile(fSim)
+
+#========================================================================
+#  Composition versus Depth Calculation?
+#========================================================================
+
+    if qDep :
+        BG.blackGrad(clsEOS,dicSAM,clsBLK,clsUNI,clsIO)
+        clsIO.q100 = UT.closeFile(fSim)
 
 #========================================================================
 #  End of Routine

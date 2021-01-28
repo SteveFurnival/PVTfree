@@ -10,8 +10,8 @@
 
 #!/usr/bin/python3
 
-import blkE100  as B1
-import genPlots as GP
+import blkE100   as B1
+import plotBatch as PB
 
 def outMORE(fMOR,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
@@ -40,7 +40,7 @@ def outMORE(fMOR,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
 #== Plot the Data ====================================================
 
-    GP.blackPlots(dTab,eTab,fOil,fGas,clsBLK,clsUNI)
+    PB.blackPlots(dTab,eTab,fOil,fGas,clsBLK,clsUNI,clsIO)
 
 #== No return value ===================================================
 
@@ -154,7 +154,7 @@ def outputHeaderOil(fSim,clsBLK,clsIO) :
     oTyp = clsBLK.oTyp
 
     uUni = "     cP    "
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         rUni = " KSM3/SM3  "
         pUni = "    BARA   "
         bUni = "  RM3/SM3  "
@@ -194,7 +194,7 @@ def outputHeaderGas(fSim,clsBLK,clsIO) :
     gTyp = clsBLK.gTyp
 
     uUni = "     cP    "
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         pUni = "    BARA   "
         rUni = " SM3/KSM3  "
         bUni = " RM3/KSM3  "
@@ -237,7 +237,7 @@ def outputOPVTsat(fSim,iRow,fTab,sExt,clsBLK,clsIO,clsUNI) :
     Co = fTab[iRow][clsBLK.iCo]
     Vo = fTab[iRow][clsBLK.iVo]
 
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         Pr = clsUNI.I2X(Pr,"bara")
         Rs = clsUNI.I2X(Rs,"ksm3/sm3")
         Co = clsUNI.I2X(Co,"1/bar")
@@ -273,7 +273,7 @@ def outputGPVTsat(fSim,iRow,fTab,sExt,clsBLK,clsIO,clsUNI) :
     Ug = fTab[iRow][clsBLK.iUd]
     Rv = fTab[iRow][clsBLK.iRv]
 
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         Pr = clsUNI.I2X(Pr,"bara")
         Bg = clsUNI.I2X(Bg,"rm3/ksm3")
         Rv = clsUNI.I2X(Rv,"sm3/ksm3")

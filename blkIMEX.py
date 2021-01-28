@@ -12,8 +12,8 @@
 
 import blkOther  as BO
 import blkProps  as BP
-import constants as CO
-import genPlots  as GP
+import plotBatch as PB
+import utilities as UT
 
 def outIMEX(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
@@ -34,12 +34,14 @@ def outIMEX(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
     if   oTyp == "PVTCOND" :
         fGas = genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO)
-    elif oTyp == "PVT" or oTyp == "PVTVO" :
+    elif oTyp == "PVT" :
+        fOil = genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
+    else :   #-- "PVTVO" is default
         fOil = genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
         
 #== Plot the Data ====================================================
 
-    GP.blackPlots(dTab,eTab,fOil,fGas,clsBLK,clsUNI)
+    PB.blackPlots(dTab,eTab,fOil,fGas,clsBLK,clsUNI,clsIO)
 
 #== No return value ===================================================
 
@@ -114,7 +116,7 @@ def outputRow(fSim,iRow,fTab,sExt,clsBLK,clsIO,clsUNI) :
     Bd = fTab[iRow][clsBLK.iBd]
     Ud = fTab[iRow][clsBLK.iUd]
 
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         Pr = clsUNI.I2X(Pr,"kpa")
         Uo = clsUNI.I2X(Uo,"mpa.s")
         Ug = clsUNI.I2X(Ug,"mpa.s")
@@ -139,10 +141,10 @@ def outputRow(fSim,iRow,fTab,sExt,clsBLK,clsIO,clsUNI) :
         sLabl = "    " + sPr + "  " + sBd + "  " + sUd + "\n"
     elif oTyp == "PVT" :
         sLabl = "    " + sPr + "  " + sRs + "  " + sBo + "  " + sBg + "  " + sUo + "  " + sUg + "\n"
-    elif oTyp == "PVTVO" :
-        sLabl = "    " + sPr + "  " + sRs + "  " + sRv + "  " + sBo + "  " + sBg + "  " + sUo + "  " + sUg + "  " + sBd + "  " + sUd + "\n"
     elif oTyp == "PVTCOND" :
         sLabl = "    " + sPr + "  " + sRs + "  " + sRv + "  " + sBo + "  " + sBg + "  " + sUo + "  " + sUg + "\n"
+    else :    #-- PVTVO is default
+        sLabl = "    " + sPr + "  " + sRs + "  " + sRv + "  " + sBo + "  " + sBg + "  " + sUo + "  " + sUg + "  " + sBd + "  " + sUd + "\n"
 
     fSim.write(sLabl)
 
@@ -161,7 +163,7 @@ def outputHeader(fSim,clsBLK,clsIO) :
     oTyp = clsBLK.oTyp
 
     uUni = "     cP    "
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         rUni = " KSM3/SM3  "
         pUni = "    BARA   "
         bUni = "  RM3/SM3  "
@@ -176,10 +178,10 @@ def outputHeader(fSim,clsBLK,clsIO) :
         sLab1 = "**      PGas       Gas FVF      Gas Visc\n"
     elif oTyp == "PVT"  :
         sLab1 = "**      PBub         GOR         Oil FVF      Gas FVF     Oil Visc     Gas Visc  \n"
-    elif oTyp == "PVTVO" :
-        sLab1 = "**      PBub         GOR          CGR         Oil FVF     Gas FVF      Oil Visc     Gas Visc      Dry FVF     Dry Visc\n"
     elif oTyp == "PVTCOND" :
         sLab1 = "**      PDew         GOR          CGR         Oil FVF     Gas FVF      Oil Visc     Gas Visc  \n"
+    else :   #-- "PVTVO" is default
+        sLab1 = "**      PBub         GOR          CGR         Oil FVF     Gas FVF      Oil Visc     Gas Visc      Dry FVF     Dry Visc\n"
 
     fSim.write("**\n")
     fSim.write("**  Fluid Properties\n")
@@ -200,7 +202,7 @@ def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
 
     OutU = clsBLK.OutU               #-- FLD (Field) or MET (Metric)
 
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         sPrs = "kpa"
         sGOR = "sm3/sm3"
         sFVF = "rm3/sm3"
@@ -253,7 +255,7 @@ def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
             Pr  = dTab[jSat][clsBLK.iPr]
             RTp = clsBLK.RT/Pr
 
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK)
 
             if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
             
@@ -273,7 +275,7 @@ def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
             Pr  = eTab[jExt][clsBLK.iPr]
             RTp = clsBLK.RT/Pr
 
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK)
 
             if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
             
@@ -323,7 +325,7 @@ def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
             Pr  = eTab[jExt][clsBLK.iPr]
             RTp = clsBLK.RT/Pr
 
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK)
 
             if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
             
@@ -341,7 +343,7 @@ def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
             Pr  = Pr + pInc
             RTp = clsBLK.RT/Pr
 
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK)
 
             if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
             
@@ -372,11 +374,11 @@ def genUnderSatOil(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO)
 #  Generate Undersatuarted Gas Data (BGUST & VGUST)
 #========================================================================
 
-def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
+def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI) :
 
     OutU = clsBLK.OutU               #-- FLD (Field) or MET (Metric)
 
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         sPrs = "kpa"
         sFVF = "rm3/sm3"
     else :
@@ -397,7 +399,7 @@ def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
     iExt = nExt - 1
 
     Rv0  = 0.0
-    P0   = CO.pStand
+    P0   = UT.pStand
     
     qVap = False
     cCon = clsBLK.Co
@@ -427,7 +429,7 @@ def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 
 #-- Dry Gas Stage (Rv = 0.0) ----------------------------------------        
 
-        Bg0,Ug0 = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv0,clsBLK,clsIO)
+        Bg0,Ug0 = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv0,clsBLK)
 
         dRow = [P0,Bg0,Ug0]
         dOut.append(dRow)
@@ -441,7 +443,7 @@ def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
             Pr = dTab[jSat][clsBLK.iPr]
             Rv = dTab[jSat][clsBLK.iRv]
 
-            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
+            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK)
 
             if jSat == iSat : dRow = [Pd,Bd,Ud,Rd]
             else            : dRow = [Pr,Bg,Ug]
@@ -487,7 +489,7 @@ def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 
 #-- Dry Gas Stage (Rv = 0.0) ----------------------------------------        
 
-        Bg0,Ug0 = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv0,clsBLK,clsIO)
+        Bg0,Ug0 = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv0,clsBLK)
 
         dRow = [P0,Bg0,Ug0]
         dOut.append(dRow)
@@ -501,7 +503,7 @@ def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
             Pr = dTab[jSat][clsBLK.iPr]
             Rv = dTab[jSat][clsBLK.iRv]
 
-            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
+            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK)
 
             dRow = [Pr,Bg,Ug]
             
@@ -520,7 +522,7 @@ def genUnderSatGas(fIMX,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
             Pr = eTab[jExt][clsBLK.iPr]
             Rv = eTab[jExt][clsBLK.iRv]
 
-            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
+            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK)
 
             if jExt == iExt : dRow = [Pd,Bd,Ud,Rd]
             else            : dRow = [Pr,Bg,Ug]

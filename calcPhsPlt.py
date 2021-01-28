@@ -16,14 +16,13 @@ import matplotlib.pyplot as PL
 import numpy             as NP
 import numpy.linalg      as LA
 import scipy.linalg      as SA
+
 import os
 
 import calcEOS   as CE
-import constants as CO
 import calcFlash as CF
 import calcReg   as CR
 import calcSat   as CS
-import calcTherm as CT
 import utilities as UT
 import writeOut  as WO
 
@@ -43,7 +42,7 @@ def allSamplesPhasePlot(clsEOS,dicSAM,clsIO) :
         fDeb = ""
 
     nSam = len(dicSAM)
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
 
     #Z = NP.zeros(nCom)
 
@@ -51,7 +50,7 @@ def allSamplesPhasePlot(clsEOS,dicSAM,clsIO) :
 
         clsSAM = dicSAM[iSam]
 
-        sNam = clsSAM.sName
+        sNam = clsSAM.sNam
 
         print("Generating Phase Plot for Sample ",iSam+1,sNam)
 
@@ -88,12 +87,12 @@ def approxPhasePlotT(clsEOS,clsSAM,clsIO,qDeb,fDeb) :
 
     pCri = None ; tCri = None
 
-    pMin = 1.0/CO.macEPS ; pMax = 0.0
-    tMin = 1.0/CO.macEPS ; tMax = 0.0
+    pMin = 1.0/UT.macEPS ; pMax = 0.0
+    tMin = 1.0/UT.macEPS ; tMax = 0.0
     
 #== Calculate the Psat at low temperature =============================
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
     
     Z = NP.zeros(nCom)
     
@@ -337,7 +336,7 @@ def updatePorTAlfa(qPrs,pRes,tRes,alfa,Z,lnKref,clsEOS,clsIO) :
 
 #== Perturb alpha and calculate df1da and df2da by difference =========
 
-    if abs(alfa) < sqrP : dPer = perT*signNumber(alfa)
+    if abs(alfa) < sqrP : dPer = perT*UT.signNumber(alfa)
     else                : dPer = perT*alfa
     
     aPer = alfa + dPer
@@ -370,7 +369,7 @@ def updatePorTAlfa(qPrs,pRes,tRes,alfa,Z,lnKref,clsEOS,clsIO) :
 
 def calcF1F2(pRes,tRes,zRef,lnKref,alfa,iDer,clsEOS,clsIO) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
     iLiq = 0
     qXD  = False
 
@@ -429,7 +428,7 @@ def solve2x2(f1,f2,df1dX,df1dY,df2dX,df2dY) :
 
     detM = df1dX*df2dY - df1dY*df2dX
 
-    if abs(detM) < CO.macEPS :
+    if abs(detM) < UT.macEPS :
         dX = 0.0 ; dY = 0.0 ; return dX,dY
 
 #-- Reduce numerical "slop" and get right signs ---------------------
@@ -452,7 +451,7 @@ def solve2x2(f1,f2,df1dX,df1dY,df2dX,df2dY) :
 
 def incipientY(alfa,zRef,lnKref,clsEOS,clsIO) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
 
     logZ = NP.log(zRef)
     logK = NP.multiply(lnKref,alfa)
@@ -469,27 +468,13 @@ def incipientY(alfa,zRef,lnKref,clsEOS,clsIO) :
 
     return yMol,yNor
 
-#======================================================================
-#  Return the sign of a number (or zero if number = 0)
-#======================================================================
-
-def signNumber(dNum) :
-
-    if   dNum > 0.0 : dSgn =  1.0
-    elif dNum < 0.0 : dSgn = -1.0
-    else            : dSgn =  0.0
-
-#== Return dSgn =======================================================
-
-    return dSgn
-
 #========================================================================
 #  Refine (p,T,K) for Saturated Line
 #========================================================================
 
 def refineInPresTemp(alfa,pRes,tRes,Z,lnKref,clsEOS,clsIO) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
 
 #-- Current Incipient Composition -----------------------------------
 
@@ -536,7 +521,7 @@ def refineInPresTemp(alfa,pRes,tRes,Z,lnKref,clsEOS,clsIO) :
 
 def updatePTK(pRes,tRes,Z,Ze,logK,fcP2e,clsEOS,clsIO) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
 
     iNeu = 0
     qPD  = True ; qTD  = True ; qXD = False
@@ -611,7 +596,7 @@ def updatePTK(pRes,tRes,Z,Ze,logK,fcP2e,clsEOS,clsIO) :
 #  Calculate a Vapour Fraction (Internal) Line
 #========================================================================
 
-def vapFracLine(pSat,tRes,Z,clsEOS,clsIO,qDeb,fDeb) :
+def vapFracLine(pRes,tRes,Z,clsEOS,clsIO,qDeb,fDeb) :
 
     nCom = len(Z)
 
@@ -626,12 +611,12 @@ def vapFracLine(pSat,tRes,Z,clsEOS,clsIO,qDeb,fDeb) :
 #  Conventional Flash to Find p -> beta = 0.5
 #----------------------------------------------------------------------
 
-    pRes = 0.5*pSat
+    tRes = 0.5*tRes
     betO = 0.5
 
-    pRes,K = iterateInitFlash(pRes,tRes,Z,betO,clsEOS,clsIO,qDeb,fDeb)
+    tRes,K = iterateInitFlash(pRes,tRes,Z,betO,clsEOS,clsIO,qDeb,fDeb)
 
-    if pRes < 0.0 : return FlsT,FlsP
+    if tRes < 0.0 : return FlsT,FlsP
 
     FlsT.append(tRes) ; FlsP.append(pRes)
 
@@ -667,7 +652,7 @@ def vapFracLine(pSat,tRes,Z,clsEOS,clsIO,qDeb,fDeb) :
 
 def findVapFracPT(alfa,betO,pRes,tRes,Z,lnKref,clsEOS) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
 
     iLiq =  1   ; iVap = -1
     qPD  = True ; qTD  = True ; qXD = False
@@ -722,7 +707,7 @@ def findVapFracPT(alfa,betO,pRes,tRes,Z,lnKref,clsEOS) :
     return pRes,tRes
 
 #========================================================================
-#  Find Pressure at given Temperature that gives required beta
+#  Find Temperature at given Pressure that gives required beta
 #========================================================================
 
 def iterateInitFlash(pRes,tRes,Z,betO,clsEOS,clsIO,qDeb,fDeb) :
@@ -749,12 +734,12 @@ def iterateInitFlash(pRes,tRes,Z,betO,clsEOS,clsIO,qDeb,fDeb) :
 #== Calculate Liquid & Vapour Mole Fractions ==========================
 
         if qDeb :
-            sOut = "pRes,betC {:10.3f} {:10.7f}\n".format(pRes,betC)
+            sOut = "pRes,tRes,betC {:10.3f} {:10.3f} {:10.7f}\n".format(pRes,tRes,betC)
             fDeb.write(sOut)
 
         if pRes < 0.0 : break
 
-        pRes,K,c = refineInPresOnly(betO,pRes,tRes,Z,K,clsEOS)
+        tRes,K,c = refineInTempOnly(betO,pRes,tRes,Z,K,clsEOS)
 
         betC = solveRR(betC,Z,c)
 
@@ -769,12 +754,12 @@ def iterateInitFlash(pRes,tRes,Z,betO,clsEOS,clsIO,qDeb,fDeb) :
     return pRes,K
 
 #========================================================================
-#  Refine Pressure to Get Required Vapour Fraction (betO)
+#  Refine Temperature to Get Required Vapour Fraction (betO)
 #========================================================================
 
-def refineInPresOnly(betO,pRes,tRes,Z,K,clsEOS) :
+def refineInTempOnly(betO,pRes,tRes,Z,K,clsEOS) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
 
     iLiq =  1
     iVap = -1
@@ -799,47 +784,47 @@ def refineInPresOnly(betO,pRes,tRes,Z,K,clsEOS) :
 
 #-- Liquid and Vapour Fugacities and their P-Derivatives ------------
 
-    qPD = True ; qTD = False ; qXD = False
+    qPD = False ; qTD = True ; qXD = False
 
-    fugX,dXdP,dumV,dumM = CE.calcPhaseFugPTX(iLiq,qPD,qTD,qXD,pRes,tRes,xNor,clsEOS)
-    fugY,dYdP,dumV,dumM = CE.calcPhaseFugPTX(iVap,qPD,qTD,qXD,pRes,tRes,yNor,clsEOS)
+    fugX,dumV,dXdT,dumM = CE.calcPhaseFugPTX(iLiq,qPD,qTD,qXD,pRes,tRes,xNor,clsEOS)
+    fugY,dumV,dYdT,dumM = CE.calcPhaseFugPTX(iVap,qPD,qTD,qXD,pRes,tRes,yNor,clsEOS)
 
 #== Form residual and various sums ====================================
 
     GF = 0.0 ; GFP = 0.0
 
     fRes = NP.zeros(nCom)
-    dfdP = NP.zeros(nCom)
+    dfdT = NP.zeros(nCom)
 
     for iC in range(nCom) :
 
         fRes[iC] = logK[iC] + fugY[iC] - fugX[iC]
-        dfdP[iC] =            dYdP[iC] - dXdP[iC]
+        dfdT[iC] =            dYdT[iC] - dXdT[iC]
         
         xyz  = xNor[iC]*yNor[iC]/Z[iC]
 
         GF  = GF  + xyz*fRes[iC]
-        GFP = GFP + xyz*dfdP[iC]
+        GFP = GFP + xyz*dfdT[iC]
 
 #== Find delP =========================================================
 
     Grhs =  G - GF
 
-    if abs(GFP) > CO.macEPS : delP = Grhs/GFP
-    else                    : delP = 0.0
+    if abs(GFP) > UT.macEPS : delT = Grhs/GFP
+    else                    : delT = 0.0
 
 #-- If update takes us too far, cut-back ... ------------------------    
 
-    if pRes + delP < 0.0 : delP = 0.5*delP
+    if tRes + delT < 0.0 : delT = 0.5*delT
 
-    #print("pRes,Grhs,GFP,delP {:10.3f} {:10.3e} {:10.3e} {:10.3e}".format(pRes,Grhs,GFP,delP))
+    #print("tRes,Grhs,GFP,delT {:10.3f} {:10.3e} {:10.3e} {:10.3e}".format(tRes,Grhs,GFP,delT))
 
-    pRes = pRes + delP
+    tRes = tRes + delT
 
 #== Calculate d(lnK): Equation (14) ===================================
 
     for iC in range(nCom) :
-        dlnK     = - fRes[iC] - delP*dfdP[iC]
+        dlnK     = - fRes[iC] - delT*dfdT[iC]
         logK[iC] =   logK[iC] + dlnK
 
 #== Return Information ================================================
@@ -847,7 +832,7 @@ def refineInPresOnly(betO,pRes,tRes,Z,K,clsEOS) :
     K = NP.exp(logK)
     c = calcCvalues(K)
 
-    return pRes,K,c
+    return tRes,K,c
 
 #========================================================================
 #  Find Theta to solve Equation (20)
@@ -1000,7 +985,7 @@ def calcKvalues(alfa,lnKref,theta) :
     return K
 
 #========================================================================
-#  Plot Phase Plot
+#  Plot Phase Plot (Batch)
 #========================================================================
 
 def plotPhasePlot(clsSAM) :
@@ -1017,7 +1002,7 @@ def plotPhasePlot(clsSAM) :
 
 #-- Data for plot ---------------------------------------------------
 
-    sNam = clsSAM.sName
+    sNam = clsSAM.sNam
 
     titL = "Approx Phase Plot for Sample " + sNam
 
@@ -1044,7 +1029,7 @@ def plotPhasePlot(clsSAM) :
 
         bLab = "Bub"
         
-        tBub = NP.copy(clsSAM.BubT) - dR2dF
+        tBub = NP.copy(clsSAM.BubT) - UT.dF2dR      #-- degR -> degF
         pBub = NP.copy(clsSAM.BubP)
 
         PL.plot(tBub,pBub,label=bLab,color='g')
@@ -1055,7 +1040,7 @@ def plotPhasePlot(clsSAM) :
 
         dLab = "Dew"
         
-        tDew = NP.copy(clsSAM.DewT) - dR2dF
+        tDew = NP.copy(clsSAM.DewT) - UT.dF2dR      #-- degR -> degF
         pDew = NP.copy(clsSAM.DewP)
 
         PL.plot(tDew,pDew,label=dLab,color='r')
@@ -1066,7 +1051,7 @@ def plotPhasePlot(clsSAM) :
 
         fLab = "V=0.5"
         
-        tFls = NP.copy(clsSAM.FlsT) - dR2dF
+        tFls = NP.copy(clsSAM.FlsT) - UT.dF2dR      #-- degR -> degF
         pFls = NP.copy(clsSAM.FlsP)
 
         PL.plot(tFls,pFls,label=fLab,color='b')

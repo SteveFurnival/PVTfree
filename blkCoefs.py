@@ -17,7 +17,7 @@ from math import sqrt
 #  EOS Phase A-Coefficient
 #========================================================================
 
-def Acoef(xOil,clsBLK,clsIO) :
+def Acoef(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -38,7 +38,7 @@ def Acoef(xOil,clsBLK,clsIO) :
 #  d[EOS Phase A-Coefficient]/dAoil
 #========================================================================
 
-def dAdAo(xOil,clsBLK,clsIO) :
+def dAdAo(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -59,7 +59,7 @@ def dAdAo(xOil,clsBLK,clsIO) :
 #  d[EOS Phase A-Coefficient]/dAgas
 #========================================================================
 
-def dAdAg(xOil,clsBLK,clsIO) :
+def dAdAg(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -82,7 +82,7 @@ def dAdAg(xOil,clsBLK,clsIO) :
 #  EOS Phase B-Coefficient
 #========================================================================
 
-def Bcoef(xOil,clsBLK,clsIO) :
+def Bcoef(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -103,7 +103,7 @@ def Bcoef(xOil,clsBLK,clsIO) :
 #  d[EOS Phase B-Coefficient]/dBoil
 #========================================================================
 
-def dBdBo(xOil,clsBLK,clsIO) :
+def dBdBo(xOil,clsBLK) :
 
     bOil0 = clsBLK.EOS0["bOil"]
 
@@ -115,7 +115,7 @@ def dBdBo(xOil,clsBLK,clsIO) :
 #  d[EOS Phase B-Coefficient]/dBgas
 #========================================================================
 
-def dBdBg(xOil,clsBLK,clsIO) :
+def dBdBg(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -129,7 +129,7 @@ def dBdBg(xOil,clsBLK,clsIO) :
 #  EOS Phase C-Coefficient
 #========================================================================
 
-def Ccoef(xOil,clsBLK,clsIO) :
+def Ccoef(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -150,7 +150,7 @@ def Ccoef(xOil,clsBLK,clsIO) :
 #  d[EOS Phase C-Coefficient]/dBoil
 #========================================================================
 
-def dCdBo(xOil,clsBLK,clsIO) :
+def dCdBo(xOil,clsBLK) :
 
     bOil0 = clsBLK.EOS0["bOil"]
     sOilM = clsBLK.EOS1["sOil"]
@@ -163,7 +163,7 @@ def dCdBo(xOil,clsBLK,clsIO) :
 #  d[EOS Phase C-Coefficient]/dBgas
 #========================================================================
 
-def dCdBg(xOil,clsBLK,clsIO) :
+def dCdBg(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -178,7 +178,7 @@ def dCdBg(xOil,clsBLK,clsIO) :
 #  d[EOS Phase C-Coefficient]/dSoil
 #========================================================================
 
-def dCdSo(xOil,clsBLK,clsIO) :
+def dCdSo(xOil,clsBLK) :
 
     bOil0 = clsBLK.EOS0["bOil"]
     bOilM = clsBLK.EOS1["bOil"]
@@ -191,7 +191,7 @@ def dCdSo(xOil,clsBLK,clsIO) :
 #  d[EOS Phase C-Coefficient]/dSgas
 #========================================================================
 
-def dCdSg(xOil,clsBLK,clsIO) :
+def dCdSg(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -206,7 +206,7 @@ def dCdSg(xOil,clsBLK,clsIO) :
 #  EOS Phase U-Coefficient
 #========================================================================
 
-def Ucoef(vOil,bOil,cOil,clsIO) :
+def Ucoef(vOil,bOil,cOil) :
 
     uCof = vOil + cOil - bOil
 
@@ -216,7 +216,7 @@ def Ucoef(vOil,bOil,cOil,clsIO) :
 #  EOS Phase W-Coefficient
 #========================================================================
 
-def Wcoef(vOil,bOil,cOil,clsIO) :
+def Wcoef(vOil,bOil,cOil) :
 
     vShf = vOil + cOil
 
@@ -228,7 +228,7 @@ def Wcoef(vOil,bOil,cOil,clsIO) :
 #  Viscosity Phase R-Coefficient
 #========================================================================
 
-def Rcoef(xOil,clsBLK,clsIO) :
+def Rcoef(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -249,7 +249,7 @@ def Rcoef(xOil,clsBLK,clsIO) :
 #  d[Viscosity Phase R-Coefficient]/dRoil
 #========================================================================
 
-def dRdRo(xOil,clsBLK,clsIO) :
+def dRdRo(xOil,clsBLK) :
 
     rOil0 = clsBLK.VIS0["rOil"]
 
@@ -261,7 +261,7 @@ def dRdRo(xOil,clsBLK,clsIO) :
 #  d[Viscosity Phase R-Coefficient]/dRgas
 #========================================================================
 
-def dRdRg(xOil,clsBLK,clsIO) :
+def dRdRg(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -275,7 +275,7 @@ def dRdRg(xOil,clsBLK,clsIO) :
 #  Viscosity Phase Eta-Coefficient
 #========================================================================
 
-def Ecoef(xOil,clsBLK,clsIO) :
+def Ecoef(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -296,7 +296,7 @@ def Ecoef(xOil,clsBLK,clsIO) :
 #  d[Viscosity Phase Eta-Coefficient]/dEoil
 #========================================================================
 
-def dEdEo(xOil,clsBLK,clsIO) :
+def dEdEo(xOil,clsBLK) :
 
     eOil0 = clsBLK.VIS0["eOil"]
 
@@ -308,7 +308,7 @@ def dEdEo(xOil,clsBLK,clsIO) :
 #  d[Viscosity Phase Eta-Coefficient]/dRgas
 #========================================================================
 
-def dEdEg(xOil,clsBLK,clsIO) :
+def dEdEg(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -322,7 +322,7 @@ def dEdEg(xOil,clsBLK,clsIO) :
 #  Viscosity Phase Mu-Coefficient
 #========================================================================
 
-def Mcoef(xOil,clsBLK,clsIO) :
+def Mcoef(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 
@@ -343,7 +343,7 @@ def Mcoef(xOil,clsBLK,clsIO) :
 #  d[Viscosity Phase Mu-Coefficient]/dUoil
 #========================================================================
 
-def dMdUo(xOil,clsBLK,clsIO) :
+def dMdUo(xOil,clsBLK) :
 
     uOil0 = clsBLK.VIS0["uOil"]
 
@@ -355,7 +355,7 @@ def dMdUo(xOil,clsBLK,clsIO) :
 #  d[Viscosity Phase Mu-Coefficient]/dUgas
 #========================================================================
 
-def dMdUg(xOil,clsBLK,clsIO) :
+def dMdUg(xOil,clsBLK) :
 
     xGas = 1.0 - xOil
 

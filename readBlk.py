@@ -10,117 +10,9 @@
 
 #!/usr/bin/python3
 
+import allData  as AD
 import blkDrive as BD
 import readGen  as RG
-
-class classBLK :
-
-#-- Creator ---------------------------------------------------------
-
-    OutU = "FLD"
-    tSim = "ECL"
-
-    def __init__(self)         :
-        self.xBlk  = "BLACK"
-        self.qLsep = False
-        self.qVsep = False
-
-    def setSepPres(self,pSep)  : self.pSep  = pSep
-    def setSepTemp(self,tSep)  : self.tSep  = tSep
-    def setSepLsep(self,Lsep)  :
-        self.Lsep  = Lsep
-        self.qLsep = True
-    def setSepVsep(self,Vsep)  :
-        self.Vsep  = Vsep
-        self.qVsep = True
-
-    def setPresUni(self,pUni)  : self.pResU  = pUni
-
-    def setPmax(self,Pmax)     : self.Pmax  = Pmax
-    def setPmin(self,Pmin)     : self.Pmin  = Pmin
-    def setPinc(self,Pinc)     : self.Pinc  = Pinc
-    def setPsat(self,Psat)     : self.Psat  = Psat
-
-    def setExpType(self,xTyp)  : self.xTyp  = xTyp
-
-    def setTres(self,Tres)     : self.Tres  = Tres
-    def setTuni(self,Tuni)     : self.tResU = Tuni
-
-    def setSample(self,sNum)   : self.sNum  = sNum
-    def setSamNam(self,sNam)   : self.sNam  = sNam
-
-    def setRT(self,RT)         : self.RT    = RT
-
-    def setDenSTO(self,dSTO)   : self.dSTO  = dSTO
-    def setDenSTG(self,dSTG)   : self.dSTG  = dSTG
-    def setDenSTW(self,dSTW)   : self.dSTW  = dSTW
-
-    def setMwSTO(self,mSTO)    : self.mSTO  = mSTO
-    def setMwSTO(self,mSTG)    : self.mSTG  = mSTG
-
-    def setCo(self,Co)         : self.Co    = Co
-
-    def setBoSlope(self,BoS)   : self.BoS   = BoS
-    def setBoInter(self,BoI)   : self.BoI   = BoI
-
-    def setBoSlope(self,UoS)   : self.UoS   = UoS
-    def setBoInter(self,UoI)   : self.UoI   = UoI
-
-    def setCoSlope(self,CoS)   : self.CoS   = CoS
-    def setCoInter(self,CoI)   : self.CoI   = CoI
-
-    def setOutUnit(self,OutU)  : self.OutU  = OutU
-
-    def setSimType(self,tSim)  : self.tSim  = tSim
-    def setOilKeyW(self,oTyp)  : self.oTyp  = oTyp
-    def setGasKeyW(self,gTyp)  : self.gTyp  = gTyp
-
-    def setPsepUni(self,pSepU) : self.pSepU = pSepU
-    def setTsepUni(self,tSepU) : self.tSepU = tSepU
-
-    def setPrefWat(self,pRefW) : self.pRefW = pRefW
-    def setPrefUni(self,pRefU) : self.pRefU = pRefU
-    def setSaltWat(self,bSalt) : self.bSalt = bSalt
-    def setSaltUni(self,saltU) : self.saltU = saltU
-    def setBrine(self,setBr)   : self.setBr = setBr
-
-    def setBrefWat(self,bRefW) : self.bRefW = bRefW
-    def setUrefWat(self,uRefW) : self.uRefW = uRefW
-    def setCrefWat(self,cRefW) : self.cRefW = cRefW
-    def setVrefWat(self,vRefW) : self.vRefW = vRefW
-
-#-- Base [EOS0] and Modifier [EOS1] holders for the EoS parameters --
-
-    nEOS = 6
-
-    EOS0 = {"aOil":1.0,"bOil":1.0,"sOil":1.0,"aGas":1.0,"bGas":1.0,"sGas":1.0}
-    EOS1 = {"aOil":1.0,"bOil":1.0,"sOil":1.0,"aGas":1.0,"bGas":1.0,"sGas":1.0}
-
-    VIS0 = {"rOil":1.0,"eOil":1.0,"uOil":1.0,"rGas":1.0,"eGas":1.0,"uGas":1.0}
-    VIS1 = {"rOil":1.0,"eOil":1.0,"uOil":1.0,"rGas":1.0,"eGas":1.0,"uGas":1.0}
-
-#-- Pointers for the dTab (Data Table) Storage -----------------------
-
-    iPr =  0  #-- Pressure
-    iRs =  1  #-- GOR
-    iBo =  2  #-- Oil FVF
-    iUo =  3  #-- Oil Viscosity
-    iCo =  4  #-- Oil Compressibility
-    iVo =  5  #-- Oil Viscosibility
-    iRv =  6  #-- CGR
-    iBg =  7  #-- Gas FVF
-    iUg =  8  #-- Gas Viscosity
-    iBd =  9  #-- Gas Dry FVF
-    iUd = 10  #-- Gas Dry Viscosity
-
-#-- Pointers for the cTab (Calc Table) Storage -----------------------
-
-    iXo =  0  #-- Oil [in Liquid] Mole Fraction
-    iYo =  1  #-- Oil [in Vapour] Mole Fraction
-    iDo =  2  #-- Oil Density
-    iDg =  3  #-- Gas Density
-    iMo =  4  #-- Oil Molar Volume
-    iMg =  5  #-- Gas Molar Volume
 
 #========================================================================
 #  Read the BLACKOIL data for Input File
@@ -145,20 +37,28 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
 
     xTyp = None
 
-    pRef = None
+    wRef = None
     Salt = None
 
-    fInP = clsIO.fInP
+    pRef = None
+    dRef = None
+
+    qDuni = None
+    dMin  = None
+    dMax  = None
+    dInc  = None
+
+    fInp = clsIO.fInp
 
 #== Create the clsBLK class to hold relevant data ======================    
 
-    clsBLK = classBLK()
+    clsBLK = AD.classBlack()
 
 #----------------------------------------------------------------------
 #  Loop over lines until ENDB[LACK] found
 #----------------------------------------------------------------------
 
-    for curL in fInP :
+    for curL in fInp :
 
         iLine += 1
 
@@ -177,7 +77,7 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
         elif tokS[0][:2].upper() == "PS"   :    #-- Separator Train Pressures
 
             pSuni = tokS[1].lower()             #-- 1st Argument must be units
-            qPuni = pSuni in clsUNI.sPres
+            qPuni = pSuni in clsUNI.sTy["pres"]
 
             if qPuni :
                 clsBLK.setPsepUni(pSuni.upper())
@@ -195,7 +95,7 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
         elif tokS[0][:2].upper() == "TS"   :    #-- Separator Train Temps
 
             tSuni = tokS[1].lower()             #-- 1st Argument must be units
-            tPuni = tSuni in clsUNI.sTemp
+            tPuni = tSuni in clsUNI.sTy["temp"]
 
             if tPuni :
                 clsBLK.setTsepUni(tSuni.upper())
@@ -229,7 +129,7 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
         elif tokS[0][:2].upper() == "PR" :      #-- Pressure-RANGE (PRange)
 
             pRuni = tokS[1].lower()             #-- 1st Argument must be units
-            qPuni = pRuni in clsUNI.sPres
+            qPuni = pRuni in clsUNI.sTy["pres"]
 
             if qPuni :
                 clsBLK.setPresUni(pSuni.upper())
@@ -266,7 +166,7 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
 
             if   uTyp[:1] == "M" :                      #-- Tempest-MORE
                 oTyp,gTyp = argsMORE(tokS)
-                clsBLK.setSimType("MOR")
+                clsBLK.setSimType("TEM")
                 clsBLK.setOilKeyW(oTyp)
                 clsBLK.setGasKeyW(gTyp)
             elif uTyp[:1] == "C" :                      #-- CMG-IMEX
@@ -295,7 +195,7 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
             while iTok < nTok:
                 if   tokS[iTok][:1].upper() == "P" :    #-- Reference Pressure
                     iTok += 1
-                    pRef  = float(tokS[iTok])
+                    wRef  = float(tokS[iTok])
                     iTok += 1
                     wUni  =       tokS[iTok]
                 elif tokS[iTok][:1].upper() == "S" :    #-- Salinity
@@ -305,9 +205,55 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
                     sUni  =       tokS[iTok]
                 iTok += 1
 
+        elif tokS[0][:6].upper() == "COMREF" :
+
+            iTok = 1
+            while iTok < nTok :
+                if   tokS[iTok][:1].upper() == "P" :    #-- PREF
+                    iTok += 1
+                    pRef  = float(tokS[iTok])
+                    iTok += 1
+                    pDuni =       tokS[iTok]
+                elif tokS[iTok][:1].upper() == "D" :    #-- DREF
+                    iTok += 1
+                    dRef  = float(tokS[iTok])
+                    iTok += 1
+                    dDuni  =       tokS[iTok]
+                iTok += 1
+
+        elif tokS[0][:6].upper() == "COMDEP" :
+
+            dUni  = tokS[1].lower()             #-- 1st Argument must be units
+            qDuni = dUni in clsUNI.sTy["leng"]
+
+            if qDuni :
+                clsBLK.setDepUni(dUni.upper())
+            else :
+                print("First argument after COMDEP must be valid Length Units [ft, m] - Error")
+                iERR = -1
+                break
+
+            iTok = 2
+            while iTok < nTok :
+                if   tokS[iTok][:4].upper() == "DMAX" :    #-- DMAX
+                    iTok += 1
+                    dMax  = float(tokS[iTok])
+                elif tokS[iTok][:4].upper() == "DMIN" :    #-- DMIN
+                    iTok += 1
+                    dMin  = float(tokS[iTok])
+                elif tokS[iTok][:4].upper() == "DINC" :    #-- DINC
+                    iTok += 1
+                    dInc  = float(tokS[iTok])
+                iTok += 1
+
         elif tokS[0][:3].upper() == "DEB" :
 
             iERR = RG.readDebug(clsIO)
+            if iERR < 0 : break
+
+        elif tokS[0][:3].upper() == "OPT" :
+
+            iERR = RG.readOption(clsIO)
             if iERR < 0 : break
 
         elif tokS[0][:4].upper() == "ENDB" :
@@ -417,9 +363,9 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
         nSam = len(dicSAM)
         qFnd = False
         for iSam in range(nSam) :
-            sArr = dicSAM[iSam].sName
+            sArr = dicSAM[iSam].sNam
             if sSam.upper() == sArr.upper() :
-                clsBLK.setSample(iSam)
+                clsBLK.setSamp(iSam,sSam)
                 qFnd = True
                 break
         if not qFnd :
@@ -434,8 +380,7 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
         iERR = -1
         return iERR
     else            :
-        clsBLK.setTuni(Tuni)
-        clsBLK.setTres(clsUNI.X2I(Tres,Tuni))
+        clsBLK.setTres(clsUNI.X2I(Tres,Tuni),Tuni)
 
 #-- Experiment Type -------------------------------------------------        
 
@@ -446,9 +391,9 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
     else            :
         clsBLK.setExpType(xTyp)
 
-#-- Have we read the WATER card with pRef and Salt? -----------------
+#-- Have we read the WATER card with wRef and Salt? -----------------
 
-    if pRef == None and Salt == None :
+    if wRef == None and Salt == None :
 
         clsBLK.setBrine(False)
         clsBLK.setPrefWat(14.6959)   #-- Standard Pressure [psia]
@@ -467,13 +412,29 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
             clsBLK.setSaltWat(0.0)       #-- Pure Water
             clsBLK.setSaltUni("mfrac")
         
-        if pRef != None :
+        if wRef != None :
             clsBLK.setPrefUni(wUni)
-            clsBLK.setPrefWat(clsUNI.X2I(pRef,wUni))
+            clsBLK.setPrefWat(clsUNI.X2I(wRef,wUni))
         else :
             clsBLK.setPrefWat(14.6959)   #-- Standard Pressure [psia]
             clsBLK.setPrefUni("psia")
             
+#== Composition versus Depth Calculation wanted =========================
+
+    qRef = False
+
+    if pRef != None and dRef != None :
+
+        clsBLK.setDepRef(clsUNI.X2I(dRef,dDuni),dDuni)
+        clsBLK.setPrsRef(clsUNI.X2I(pRef,pDuni),pDuni)
+
+        qRef = True
+
+    if qDuni != None :
+
+        clsBLK.setDepths(dMin,dMax,dInc,qDuni)
+
+        if qRef : clsBLK.qDep = True
 
 #========================================================================
 #  Data All Valid, Proceed to Calculate Tables
@@ -483,7 +444,7 @@ def readBlack(clsIO,clsEOS,dicSAM,clsUNI) :
 
         print("readBlack: All BlackOil Data Read OK")
 
-        BD.calcBlack(clsIO,clsBLK,clsEOS,dicSAM,clsUNI)
+        BD.calcBlack(clsEOS,dicSAM,clsBLK,clsUNI,clsIO)
 
 #========================================================================
 #  End of Routine

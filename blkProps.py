@@ -14,7 +14,7 @@ import numpy     as NP
 
 import blkCoefs  as BC
 import calcEOS   as CE
-import constants as CO
+import utilities as UT
 
 from math import exp,log,log10,sqrt
 
@@ -22,13 +22,13 @@ from math import exp,log,log10,sqrt
 #  Calculate Phase FVF to re-fit (sOil,sGas)
 #========================================================================
 
-def calcPhaseFVF(qLiq,RTp,BoCon,xOil,clsBLK,clsIO) :
+def calcPhaseFVF(qLiq,RTp,BoCon,xOil,clsBLK) :
 
-    aOil = BC.Acoef(xOil,clsBLK,clsIO)
-    bOil = BC.Bcoef(xOil,clsBLK,clsIO)
-    cOil = BC.Ccoef(xOil,clsBLK,clsIO)
+    aOil = BC.Acoef(xOil,clsBLK)
+    bOil = BC.Bcoef(xOil,clsBLK)
+    cOil = BC.Ccoef(xOil,clsBLK)
     
-    Moil = phaseMw(clsBLK.mSTG,clsBLK.mSTO,xOil,clsIO)
+    Moil = phaseMw(clsBLK.mSTG,clsBLK.mSTO,xOil)
 
     Aoil = aOil/(RTp*clsBLK.RT)
     Boil = bOil/ RTp
@@ -40,13 +40,10 @@ def calcPhaseFVF(qLiq,RTp,BoCon,xOil,clsBLK,clsIO) :
     E1 = Aoil - 3.0*Boi2 -  2.0*Boil
     E0 = Boi3 +     Boi2 - Aoil*Boil
 
-    nRoot,Zsmal,Zlarg = CE.solveCubic(E2,E1,E0)
+    nRoot,Zsmal,Zlarg = solveCubic(E2,E1,E0)    #-- Local copy of cubic-solver!!
 
     if qLiq : Voil = Zsmal*RTp - cOil
     else    : Voil = Zlarg*RTp - cOil
-
-    if clsIO.Deb["BLACK"] > 0 :
-        print("nRoot,Zsmal,Zlarg,RTp,cOil,Voil {:1d} {:8.5f} {:8.5f} {:8.5f} {:8.5f} {:8.5f}".format(nRoot,Zsmal,Zlarg,RTp,cOil,Voil))
 
     Doil = Moil/Voil
 
@@ -58,7 +55,7 @@ def calcPhaseFVF(qLiq,RTp,BoCon,xOil,clsBLK,clsIO) :
 #  Reservoir Oil Density, Singh et al, SPE 109596, Eqn.(11)
 #========================================================================
 
-def denOil(dSTO,dSTG,Rs,Bo,clsIO) :
+def denOil(dSTO,dSTG,Rs,Bo) :
 
     denO = (dSTO + Rs*dSTG)/Bo
 
@@ -68,7 +65,7 @@ def denOil(dSTO,dSTG,Rs,Bo,clsIO) :
 #  Reservoir Gas Density, Singh et al, SPE 109596, Eqn.(19)
 #========================================================================
 
-def denGas(dSTO,dSTG,Rv,Bg,clsIO) :
+def denGas(dSTO,dSTG,Rv,Bg) :
 
     denG = (dSTG + Rv*dSTO)/Bg
 
@@ -78,7 +75,7 @@ def denGas(dSTO,dSTG,Rv,Bg,clsIO) :
 #  Phase Mole Weight
 #========================================================================
 
-def phaseMw(mSTG,mSTO,xOil,clsIO) :
+def phaseMw(mSTG,mSTO,xOil) :
 
     xGas = 1.0 - xOil
 
@@ -103,26 +100,17 @@ def calcUndViscStand(pB,uB,p) :
 #  2-Component (STO & STG) LBC Viscosity
 #========================================================================
 
-def calcLBCvisc(xOil,dOil,clsBLK,clsIO) :
+def calcLBCvisc(xOil,dOil,clsBLK) :
 
-    if clsIO.Deb['BLACK'] > 0 : qDeb = True
-    else                      : qDeb = False
+    dCof = BC.Rcoef(xOil,clsBLK)
+    eCof = BC.Ecoef(xOil,clsBLK)
+    uCof = BC.Mcoef(xOil,clsBLK)
 
-    rCof = BC.Rcoef(xOil,clsBLK,clsIO)
-    eCof = BC.Ecoef(xOil,clsBLK,clsIO)
-    uCof = BC.Mcoef(xOil,clsBLK,clsIO)
+    dRed = dOil/dCof
 
-    dRed = dOil/rCof
-
-    sumV = sumVisc(dRed,clsIO)
+    sumV = sumVisc(dRed)
 
     vLBC = uCof +(pow(sumV,4) - 0.0001)/eCof
-
-    if qDeb :
-        print("xOil,dOil {:10.3e} {:10.3e}".format(xOil,dOil))
-        print("rCof,eCof {:10.3e} {:10.3e}".format(rCof,eCof))
-        print("uCof,dRed {:10.3e} {:10.3e}".format(uCof,dRed))
-        print("sumV,vLBC {:10.3e} {:10.3e}".format(sumV,vLBC))
 
     return vLBC
 
@@ -130,17 +118,17 @@ def calcLBCvisc(xOil,dOil,clsBLK,clsIO) :
 #  Derivative of LBC Viscosity wrt Critical Density Multipliers
 #========================================================================
 
-def calcLBCderv(xOil,dOil,clsBLK,clsIO) :
+def calcLBCderv(xOil,dOil,clsBLK) :
 
-    rCof = BC.Rcoef(xOil,clsBLK,clsIO)
-    eCof = BC.Ecoef(xOil,clsBLK,clsIO)
+    dCof = BC.Rcoef(xOil,clsBLK)
+    eCof = BC.Ecoef(xOil,clsBLK)
 
-    dRed = dOil/rCof
+    dRed = dOil/dCof
 
-    sumV = sumVisc(dRed,clsIO)
-    sumD = sumDerv(dRed,clsIO)
+    sumV = sumVisc(dRed)
+    sumD = sumDerv(dRed)
 
-    dudR = 4.0*pow(sumV,3)*sumD*(-dRed/rCof)/eCof
+    dudR = 4.0*pow(sumV,3)*sumD*(-dRed/dCof)/eCof
 
     return dudR
 
@@ -148,7 +136,7 @@ def calcLBCderv(xOil,dOil,clsBLK,clsIO) :
 #  Fourth Power in Reduced Density for LBC Viscosity
 #========================================================================
 
-def sumVisc(dRed,clsIO) :
+def sumVisc(dRed) :
 
 #-- LBC Coefficients ------------------------------------------------    
 
@@ -166,7 +154,7 @@ def sumVisc(dRed,clsIO) :
 #  Derivative of Fourth Power in Reduced Density for LBC Viscosity
 #========================================================================
 
-def sumDerv(dRed,clsIO) :
+def sumDerv(dRed) :
 
 #-- LBC Coefficients ------------------------------------------------    
 
@@ -183,14 +171,14 @@ def sumDerv(dRed,clsIO) :
 #  EoS (a,b) constant for Stock Tank Oil (STO)
 #========================================================================
 
-def initOilProps(dSTO,clsBLK,clsIO) :
+def initOilProps(dSTO,clsBLK) :
 
     OmegaA =   0.457235529  #-- PR Omega-A parameter
     OmegaB =   0.077796074  #-- PR Omega-B parameter
 
     clsBLK.dSTO = dSTO
 
-    mSTO,oGrv = stockTankOilMw(dSTO,clsIO)
+    mSTO,oGrv = stockTankOilMw(dSTO)
 
 #-- Singh Eqn.(32) and (33) -----------------------------------------    
 
@@ -201,21 +189,22 @@ def initOilProps(dSTO,clsBLK,clsIO) :
 
 #-- Singh Eqn.(35) and (36) -----------------------------------------    
 
-    if Aoil <= 0.49 : mAcf = lowAFmCoef(Aoil,clsIO)
-    else            : mAcf = higAFmCoef(Aoil,clsIO)
+    if Aoil <= 0.49 : mAcf = lowAFmCoef(Aoil)
+    else            : mAcf = higAFmCoef(Aoil)
 
-    Tred = CO.tStand/Toil                           #-- Reduced Temperature
+    Tred = UT.tStand/Toil                           #-- Reduced Temperature
 
     alfa = pow((1.0 + mAcf*(1.0 - sqrt(Tred))),2)   #-- Singh Eqn.(34)
 
-    aCof = OmegaA*pow(CO.gasCon*Toil,2)*alfa/Poil   #-- Singh Eqn.(29)                         
-    bCof = OmegaB*    CO.gasCon*Toil        /Poil   #-- Singh Eqn.(30)
+    aCof = OmegaA*pow(UT.gasCon*Toil,2)*alfa/Poil   #-- Singh Eqn.(29)                         
+    bCof = OmegaB*    UT.gasCon*Toil        /Poil   #-- Singh Eqn.(30)
     sCof = 0.0                                      #-- Singh Eqn.(31)
 
     Voil = 21.573 + 0.015122*mSTO - 27.656*oGrv + 0.070615*mSTO*oGrv    #--Singh Eqn.(66)
+    Zoil = Poil*Voil/(UT.gasCon*Toil)
 
     rCof = mSTO/Voil                                            #-- Density
-    eCof = 5.35*pow(Toil,CO.lbcTcX)*pow(mSTO,CO.lbcMwX)*pow(Poil,CO.lbcPcX) #-- Singh (70)
+    eCof = 5.35*pow(Toil,UT.lbcTcX)*pow(mSTO,UT.lbcMwX)*pow(Poil,UT.lbcPcX) #-- Singh (70)
 
     if Tred <= 1.5 :
         uCof = 34.10E-05*pow(      Tred        ,0.94 )/eCof     #-- Singh (71)
@@ -224,6 +213,8 @@ def initOilProps(dSTO,clsBLK,clsIO) :
 
     #print("InitOilProps: aCof,bCof,sCof {:10.3e}{:10.3e}{:10.3e}".format(aCof,bCof,sCof))
     #print("initOilProps: rCof,eCof,uCof {:10.3e}{:10.3e}{:10.3e}".format(rCof,eCof,uCof))
+
+    clsBLK.setOilCrit(Toil,Poil,Voil,Zoil)        
 
 #========================================================================
 #  End of Routine
@@ -243,15 +234,15 @@ def initOilProps(dSTO,clsBLK,clsIO) :
 #  EoS (a,b) constant for Stock Tank Gas (STG)
 #========================================================================
 
-def initGasProps(dSTG,clsBLK,clsIO) :
+def initGasProps(dSTG,clsBLK) :
 
     OmegaA =   0.457235529  #-- PR Omega-A parameter
     OmegaB =   0.077796074  #-- PR Omega-B parameter
 
     clsBLK.dSTG = dSTG
 
-    gGrv = dSTG/CO.denAir
-    mSTG = gGrv*CO.molAir
+    gGrv = dSTG/UT.denAir
+    mSTG = gGrv*UT.molAir
 
     if gGrv < 0.75 :
         Tgas = 168.0 + gGrv*(325.0 - gGrv*12.5)     #-- Singh Eqn.(41)
@@ -262,22 +253,22 @@ def initGasProps(dSTG,clsBLK,clsIO) :
 
     Agas = 0.1637*gGrv - 0.0792                     #-- Singh Eqn.(48)
 
-    if Agas <= 0.49 : mAcf = lowAFmCoef(Agas,clsIO) #-- Singh Eqn.(46)
-    else            : mAcf = higAFmCoef(Agas,clsIO) #-- Singh Eqn.(47)
+    if Agas <= 0.49 : mAcf = lowAFmCoef(Agas) #-- Singh Eqn.(46)
+    else            : mAcf = higAFmCoef(Agas) #-- Singh Eqn.(47)
 
-    Tred = CO.tStand/Tgas                           #-- Reduced Temperature
+    Tred = UT.tStand/Tgas                           #-- Reduced Temperature
 
     alfa = pow((1.0 + mAcf*(1.0 - sqrt(Tred))),2)   #-- Singh Eqn.(45)
 
-    aCof = OmegaA*pow(CO.gasCon*Tgas,2)*alfa/Pgas   #-- Singh Eqn.(38)       
-    bCof = OmegaB*    CO.gasCon*Tgas        /Pgas   #-- Singh Eqn.(39)
+    aCof = OmegaA*pow(UT.gasCon*Tgas,2)*alfa/Pgas   #-- Singh Eqn.(38)       
+    bCof = OmegaB*    UT.gasCon*Tgas        /Pgas   #-- Singh Eqn.(39)
     sCof = 0.0                                      #-- Singh Eqn.(40)
 
     Zgas = 0.2905 - 0.085*Agas      #-- Reid Correlation, Whitson Eqn.(5.66)
-    Vgas = Zgas*CO.gasCon*Tgas/Pgas #-- Singh Eqn.(68)
+    Vgas = Zgas*UT.gasCon*Tgas/Pgas #-- Singh Eqn.(68)
 
     rCof = mSTG/Vgas
-    eCof = 5.35*pow(Tgas,CO.lbcTcX)*pow(mSTG,CO.lbcMwX)*pow(Pgas,CO.lbcPcX) #-- Singh (73)
+    eCof = 5.35*pow(Tgas,UT.lbcTcX)*pow(mSTG,UT.lbcMwX)*pow(Pgas,UT.lbcPcX) #-- Singh (73)
 
     if Tred <= 1.5 :
         uCof = 34.10E-05*pow(      Tred,        0.94 )/eCof     #-- Singh (74)
@@ -286,6 +277,8 @@ def initGasProps(dSTG,clsBLK,clsIO) :
 
     #print("InitGasProps: aCof,bCof,sCof {:10.3e}{:10.3e}{:10.3e}".format(aCof,bCof,sCof))
     #print("initGasProps: rCof,eCof,uCof {:10.3e}{:10.3e}{:10.3e}".format(rCof,eCof,uCof))
+
+    clsBLK.setGasCrit(Tgas,Pgas,Vgas,Zgas)        
 
 #========================================================================
 #  End of Routine
@@ -305,7 +298,7 @@ def initGasProps(dSTG,clsBLK,clsIO) :
 #  Low (<  0.49) Acentric Factor m-Coefficient [Singh Eqn.35 and 46)
 #========================================================================
 
-def lowAFmCoef(AF,clsIO) :
+def lowAFmCoef(AF) :
 
     mAcf = 0.37464 + 1.54226*AF - 0.26992*AF*AF
 
@@ -315,7 +308,7 @@ def lowAFmCoef(AF,clsIO) :
 #  High (>= 0.49) Acentric Factor m-Coefficient [Singh Eqn.36 and 47)
 #========================================================================
 
-def higAFmCoef(AF,clsIO) :
+def higAFmCoef(AF) :
 
     AF2 = AF*AF
 
@@ -328,9 +321,9 @@ def higAFmCoef(AF,clsIO) :
 #  Singh et al, SPE 109596, Eqn.(15)
 #========================================================================
 
-def stockTankOilMw(dSTO,clsIO) :
+def stockTankOilMw(dSTO) :
 
-    oGrv = dSTO/CO.denWat
+    oGrv = dSTO/UT.denWat
     oAPI = 141.5/oGrv - 131.5
 
     mSTO = 240.0 - 2.22*oAPI
@@ -342,10 +335,10 @@ def stockTankOilMw(dSTO,clsIO) :
 #  Singh et al, SPE 109596, Eqn.(16)
 #========================================================================
 
-def stockTankGasMw(dSTG,clsIO) :
+def stockTankGasMw(dSTG) :
 
-    gGrv = dSTG/CO.denAir
-    mSTG = gGrv*CO.molAir
+    gGrv = dSTG/UT.denAir
+    mSTG = gGrv*UT.molAir
 
     return mSTG,gGrv
 
@@ -451,7 +444,7 @@ def calcUndViscStand(pB,uB,p) :
 
 def abdulMajeedA(dSTO,Rs) :
 
-    gSTO =  dSTO/CO.denWat      #-- Oil Specific Gravity
+    gSTO =  dSTO/UT.denWat      #-- Oil Specific Gravity
     oAPI = 141.5/gSTO - 131.5   #-- Oil API Gravity
 
     lnRs = log(5.615*Rs)
@@ -476,6 +469,86 @@ def abdulMajeedVisc(A,P,Pb,Ub) :
 #== Return value ======================================================
 
     return Uo
+
+#========================================================================
+#  Solve the Cubic x^3 + E2 x^2 + E1 x + E0 = 0
+#  See Numerical Recipes Section 5.6 [E2 = a, E1 = b, E0 = c]
+#  http://www.aip.de/groups/soe/local/numres/bookfpdf/f5-6.pdf
+#========================================================================
+
+def solveCubic(E2,E1,E0) :
+
+    F2 = E2*UT.Third                  #--  a/3
+    F1 = E1*UT.Third                  #--  b/3
+
+    F22 = F2*F2                       #-- (a/3)^2
+
+    Q =    F22 - F1                   #-- Eqn.(5.6.10)
+    R = F2*F22 - F1*F2*1.5 + 0.5*E0   #-- Eqn.(5.6.10)
+
+#-- Discriminant ----------------------------------------------------    
+
+    D = R*R - Q*Q*Q
+
+#== One Real Root =====================================================
+    
+    if   D > 0.0 :
+        
+        argA = NP.absolute(R) + NP.sqrt(D)             #-- Arg of Eqn.(5.6.13)
+        A13  = NP.power(argA,UT.Third)
+        A    = -A13*NP.sign(R)                         #-- Eqn.(5.6.15)
+        
+        if A == 0.0 : B = 0.0                          #-- Eqn.(5.6.16)
+        else        : B = Q/A
+        
+        x1 = A + B                                     #-- Eqn.(5.6.17)
+        x3 = x1
+
+        nR = 1
+
+#== Three Real Roots: Ignore Central Root as Unphysical in EoS ========
+        
+    elif D < 0.0 :
+        
+        sqrtQ = NP.sqrt(Q)
+        theta = NP.arccos(R/(Q*sqrtQ))                 #-- Eqn.(5.6.11)
+        cTh13 = NP.cos(UT.Third*theta)
+        
+        x1 = -2.0*sqrtQ*cTh13                          #-- Eqn.(5.6.12-x1)
+        
+#-- Next expression have used cos(A-B) = cosA.cosB + sinA.sinB where
+#-- cos(-2.PI/3) = -1/2, sin(-2.PI/3) = -sqrt(3)/2 and sinA = sqrt(1-cosA^2)
+
+        x3 = sqrtQ*(cTh13+NP.sqrt(3.0*(1.0-cTh13*cTh13)))
+
+        nR = 3
+
+#== Error in NR Text: see http://numerical.recipes/forum/showthread.php?t=865
+        
+    else :
+        
+        sqrtQ = NP.sqrt(Q)
+        
+        if   R > 0.0 :
+            x1 = -2.0*sqrtQ
+            x3 =      sqrtQ
+        elif R < 0.0 :
+            x1 =     -sqrtQ
+            x3 =  2.0*sqrtQ
+        else :
+            x1 = 0.0
+            x3 = 0.0
+
+        nR = 3
+
+#== Return Values =====================================================
+
+    eLow = x1 - F2
+    eHig = x3 - F2
+
+    if nR > 1 and eLow < 0.0 : eLow = eHig
+
+    return nR,eLow,eHig
 
 #========================================================================
 #  End of Module

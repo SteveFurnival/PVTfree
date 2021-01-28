@@ -11,21 +11,23 @@
 
 from copy  import deepcopy
 from numpy import linalg   as LA
-from math  import log, exp, sqrt
+from math  import log,exp,sqrt
 
 import numpy     as NP
 
-import constants as CO
+import calcGrad  as CG
 import calcProps as CP
 import calcExps  as CX
-import genPlots  as GP
+import plotBatch as PB
+import utilities as UT
 import writeOut  as WO
+import writeReg  as WR
 
 #========================================================================
 #  Regression Driver
 #========================================================================
 
-def runRegression(mIter,clsIO,clsEOS0,dicSAM0,dicEXP0,dicREG,qExp,clsUNI) :
+def runRegression(mIter,qExp,clsEOS0,dicSAM0,dicEXP0,dicREG,clsUNI,clsIO) :
 
 #== Set Output File Name [rootName.reg] ===============================
 
@@ -54,18 +56,16 @@ def runRegression(mIter,clsIO,clsEOS0,dicSAM0,dicEXP0,dicREG,qExp,clsUNI) :
 #  Run the experiments with the initial EoS and set of sample info
 #--------------------------------------------------------------------
 
-    runRegExps(clsIO,clsEOS0,dicSAM0,dicEXP0,qExp)
+    qDif = False
+
+    runRegExps(qExp,qDif,clsEOS0,dicSAM0,dicEXP0,clsIO)
 
 #== Initial residuals vector ==========================================
 
     qWrt = True
-    
-    fReg.write("\n")
-    fReg.write("============================================================\n")
-    fReg.write("  Regression Output:  Initial Residuals\n")
-    fReg.write("============================================================\n")
-    fReg.write("\n")
 
+    WR.writeInitResHead(clsIO)
+    
     ssq0,regI = calcResSSQ(qWrt,dicEXP0,qExp,clsIO)
 
     nReg = len(regI)  #-- Number of items in Residual Vector
@@ -107,9 +107,9 @@ def runRegression(mIter,clsIO,clsEOS0,dicSAM0,dicEXP0,dicREG,qExp,clsUNI) :
 
         delX = rotDisc(nIter,Grad,Hess,dicREG,dicSAM1,clsEOS1,clsIO)
 
-        #writeVector("Grad   ",Grad)
-        #writeVector("xVec[B]",xVec)
-        #writeVector("delX   ",delX)
+        #WR.writeVector("Grad   ",Grad)
+        #WR.writeVector("xVec[B]",xVec)
+        #WR.writeVector("delX   ",delX)
 
 #======================================================================
 #  Check if Variables Bounded?
@@ -123,7 +123,7 @@ def runRegression(mIter,clsIO,clsEOS0,dicSAM0,dicEXP0,dicREG,qExp,clsUNI) :
 
         ssq1,xVec,regI = lineSearch(clsIO,dicREG,dicSAM0,dicSAM1,clsEOS0,clsEOS1,dicEXP1,qExp,ssq0,xVec,delX,Grad)
 
-        #writeVector("xVec[A]",xVec)
+        #WR.writeVector("xVec[A]",xVec)
 
 #======================================================================
 #  Progress in SSQ?
@@ -144,7 +144,7 @@ def runRegression(mIter,clsIO,clsEOS0,dicSAM0,dicEXP0,dicREG,qExp,clsUNI) :
 #== Plot Before/After Results =========================================        
 
     qReg = True
-    GP.regPlots(clsIO,dicEXP0,dicEXP1,dicSAM1,qReg,clsUNI)
+    PB.regPlots(clsIO,dicEXP0,dicEXP1,dicSAM1,qReg,clsUNI)
 
 #======================================================================
 #  (Deep) copy the working EoS/Samples back to the main EoS/Samples
@@ -157,13 +157,9 @@ def runRegression(mIter,clsIO,clsEOS0,dicSAM0,dicEXP0,dicREG,qExp,clsUNI) :
 #======================================================================
 #  Write Final Set of Residuals
 #======================================================================
-    
-    fReg.write("\n")
-    fReg.write("============================================================\n")
-    fReg.write("  Regression Output:  Final Residuals\n")
-    fReg.write("============================================================\n")
-    fReg.write("\n")
 
+    WR.writeFinalResHead(clsIO)
+    
     ssq0,regI = calcResSSQ(qWrt,dicEXP0,qExp,clsIO)
 
 #======================================================================
@@ -178,7 +174,7 @@ def runRegression(mIter,clsIO,clsEOS0,dicSAM0,dicEXP0,dicREG,qExp,clsUNI) :
 
     sTit = "Regression Using " + sExt
     
-    WO.outputProps(clsIO,clsEOS0,dicSAM0,sTit)
+    WO.outputProps(sTit,clsEOS0,dicSAM0,clsIO)
 
 #-- Only Print the Regession "Active" Experiments [qExp] ------------    
 
@@ -192,8 +188,8 @@ def runRegression(mIter,clsIO,clsEOS0,dicSAM0,dicEXP0,dicREG,qExp,clsUNI) :
 
 #-- Print the Experiments -------------------------------------------        
     
-    WO.outputExps( clsIO,dicEXP0,dicSAM0,clsUNI)
-
+    WO.outputExps(clsEOS0,dicSAM0,dicEXP0,clsUNI,clsIO)
+    
 #-- Restore the IsAct Flag ------------------------------------------    
 
     for iExp in range(nExp) :
@@ -203,7 +199,11 @@ def runRegression(mIter,clsIO,clsEOS0,dicSAM0,dicEXP0,dicREG,qExp,clsUNI) :
     sTit = "Regression Using " + sTyp + " Variable Types"
     WO.outputSave(sTit,clsEOS0,dicSAM0,clsIO)
 
+#== Classes/Dictionaries Impicitly Update => No Return Arguments ======    
+
     return clsEOS0,dicSAM0,dicEXP0
+
+    #return
 
 #========================================================================
 #  Are variables currently bounded, or will they become bounded?
@@ -212,14 +212,12 @@ def runRegression(mIter,clsIO,clsEOS0,dicSAM0,dicEXP0,dicREG,qExp,clsUNI) :
 def checkBounds(nIter,clsEOS,dicREG,dicSAM,xVec,delX,Grad,Hess,clsIO) :
 
     nVar = len(dicREG)
-
     stpM = 0.0
-
     xTst = 1.0E-06
 
-    WO.outputRegVars(clsIO,clsEOS,dicREG,dicSAM,xVec,delX,nIter)
+    WR.outputRegVars(clsIO,clsEOS,dicREG,dicSAM,xVec,delX,nIter)
 
-    #writeVector("delX[BoB]",delX)
+    #WR.writeVector("delX[BoB]",delX)
 
 #--------------------------------------------------------------------
 #  Already bounded variables?
@@ -239,7 +237,7 @@ def checkBounds(nIter,clsEOS,dicREG,dicSAM,xVec,delX,Grad,Hess,clsIO) :
 #  End of Routine
 #======================================================================
 
-    #writeVector("delX[BoA]",delX)
+    #WR.writeVector("delX[BoA]",delX)
 
     return delX,Grad
 
@@ -300,12 +298,12 @@ def existBounded(nIter,dicREG,dicSAM,clsEOS,xVec,delX,Grad,Hess,clsIO) :
                     Hess[jVar][iVar] = 0.0
                 Hess[iVar][iVar] = 1.0
 
-        #writeMatrix("Hess ",Hess)
+        #WR.writeMatrix("Hess ",Hess)
 
         nIter = -1
         delX = rotDisc(nIter,Grad,Hess,dicREG,dicSAM,clsEOS,clsIO)
 
-        #writeVector("delX[C]",delX)
+        #WR.writeVector("delX[C]",delX)
 
 #====================================================================== 
 #  End of Routine
@@ -335,12 +333,9 @@ def limitBounds(dicREG,xVec,delX) :
 
         #print("iV,xV,dX,Mn,xP,Mx {:2d} {:10.5f} {:10.5f} {:10.5f} {:10.5f} {:10.5f}".format(iVar,xVec[iVar],delX[iVar],xMin,xPro,xMax))
 
-        if   xPro > xMax :
-            stpT = (xMax - xVec[iVar])/delX[iVar]
-        elif xPro < xMin :
-            stpT = (xMin - xVec[iVar])/delX[iVar]
-        else :
-            stpT = 1.0
+        if   xPro > xMax : stpT = (xMax - xVec[iVar])/delX[iVar]
+        elif xPro < xMin : stpT = (xMin - xVec[iVar])/delX[iVar]
+        else             : stpT = 1.0
 
         #print("iVar,stpT,stpM {:2d} {:10.5f} {:10.3e}".format(iVar,stpT,stpM))
 
@@ -371,7 +366,7 @@ def rotDisc(nIter,Grad,Hess,dicREG,dicSAM,clsEOS,clsIO) :
 #== Some diagnostics to help users ==================================
 
     if dicREG != None and nIter > 0 :
-        diagnoseHess(nIter,detM,iOrd,eVal,eVec,dicREG,dicSAM,clsEOS,clsIO)
+        WR.diagnoseHess(nIter,detM,iOrd,eVal,eVec,dicREG,dicSAM,clsEOS,clsIO)
 
 #== Calculate the p-Vector ==========================================
 
@@ -412,6 +407,8 @@ def calcJaco(clsIO,dicREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,dicEXP,qExp,xVec,regI)
 #  Loop over variables
 #======================================================================
 
+    qDif = True
+
     for iVar in range(nVar) :
 
         clsREG = dicREG[iVar]  #-- Current regression variable class
@@ -422,13 +419,13 @@ def calcJaco(clsIO,dicREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,dicEXP,qExp,xVec,regI)
         dPer = dVar*xVec[iVar]
         xPer = xVec[iVar] + dPer
 
-        perturbVariable(clsREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,xPer)
+        perturbVariable(xPer,clsREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,clsIO)
 
 #--------------------------------------------------------------------
 #  Run the experiments with the perturbed EoS
 #--------------------------------------------------------------------
 
-        runRegExps(clsIO,clsEOS1,dicSAM1,dicEXP,qExp)
+        runRegExps(qExp,qDif,clsEOS1,dicSAM1,dicEXP,clsIO)
 
 #-- Calculate the Perturbed residuals and SSQ -----------------------
 
@@ -445,7 +442,7 @@ def calcJaco(clsIO,dicREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,dicEXP,qExp,xVec,regI)
 
 #-- Restore the current value ---------------------------------------
 
-        perturbVariable(clsREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,xSav)
+        perturbVariable(xSav,clsREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,clsIO)
 
 #======================================================================
 #  Return the Jacobian Matrix
@@ -478,7 +475,7 @@ def calcYvec(pVec,dVec,clsIO) :
 
     for iVec in range(nVec) :
         
-        if abs(dVec[iVec]) < CO.macEPS :
+        if abs(dVec[iVec]) < UT.macEPS :
             yVec[iVec] = 0.0
         else :
             yVec[iVec] = pVec[iVec]/dVec[iVec]
@@ -497,7 +494,7 @@ def calcYvec(pVec,dVec,clsIO) :
                 lVec = iVec
                 dlV  = dVec[iVec]
                 plV  = pVec[iVec]
-                ylV  = yH*signNumber(plV)
+                ylV  = yH*UT.signNumber(plV)
 
     #sOut = "calcYvec: bTst,cTst,jVec,lVec {:10.3e} {:10.3e} {:2d} {:2d}\n".format(bTst,cTst,jVec,lVec)
     #fDeb.write(sOut)
@@ -514,7 +511,7 @@ def calcYvec(pVec,dVec,clsIO) :
             #sOut = "iV,rI,sI,yV {:2d} {:10.3e} {:10.3e} {:10.3e}\n".format(iVec,rI,sI,yVec[iVec])
             #fDeb.write(sOut)
 
-    #writeVector("yVec",yVec)
+    #WR.writeVector("yVec",yVec)
 
     #sOut = "calcYvec: Exit\n"
     #fDeb.write(sOut)
@@ -522,20 +519,6 @@ def calcYvec(pVec,dVec,clsIO) :
 #== Return yVec =======================================================
 
     return yVec
-
-#======================================================================
-#  Return the sign of a number (or zero if number = 0)
-#======================================================================
-
-def signNumber(dNum) :
-
-    if   dNum > 0.0 : dSgn =  1.0
-    elif dNum < 0.0 : dSgn = -1.0
-    else            : dSgn =  0.0
-
-#== Return dSgn =======================================================
-
-    return dSgn
 
 #======================================================================
 #  Digaonalise the Matrix, i.e. H = ST*D*S
@@ -568,8 +551,8 @@ def diagHess(Hess) :
     eVec = eVec[:,iOrd]
 
     #print("iOrd ",iOrd)
-    #writeVector("eVal",eVal)
-    #writeMatrix("eVec",eVec)
+    #WR.writeVector("eVal",eVal)
+    #WR.writeMatrix("eVec",eVec)
 
 #== Return Determinant, Eigenvalues (eVal) and Eigenvectors (eVec) ====
 
@@ -579,7 +562,7 @@ def diagHess(Hess) :
 #  Perturb a Variable in the EoS
 #========================================================================
 
-def perturbVariable(clsREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,vMul) :
+def perturbVariable(vMul,clsREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,clsIO) :
 
     sReg = {'TCRIT':'TC','PCRIT':'PC','ACENF':'AF','SHIFT':'SS',
             'MULTA':'MA','MULTB':'MB','VCRIT':'VC'}
@@ -603,20 +586,20 @@ def perturbVariable(clsREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,vMul) :
         iSam = clsREG.vSam
         
         if   vNam == "MPLUS" :
-            vBas = dicSAM0[iSam].mPlus
+            vBas = dicSAM0[iSam].iPlsMW
             vPer = vBas*vMul
-            dicSAM1[iSam].mPlus = vPer
+            dicSAM1[iSam].iPlsMW = vPer
         elif vNam == "SPLUS" :
-            vBas = dicSAM0[iSam].sPlus
+            vBas = dicSAM0[iSam].iPlsSG
             vPer = vBas*vMul
-            dicSAM1[iSam].sPlus = vPer
+            dicSAM1[iSam].iPlsSG = vPer
         elif vNam == "APLUS" :
-            vBas = dicSAM0[iSam].aPlus
+            vBas = dicSAM0[iSam].iPlsAL
             vPer = vBas*vMul
-            dicSAM1[iSam].aPlus = vPer
+            dicSAM1[iSam].iPlsAL = vPer
 
         sumPlusFrac(dicSAM1,clsEOS1)
-        iERR = CP.splitPlus(dicSAM1,clsEOS1)
+        iERR = CP.splitPlus(dicSAM1,clsEOS1,clsIO)
 
     elif vTyp == "KIJ" :
         
@@ -642,17 +625,15 @@ def perturbVariable(clsREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,vMul) :
 
 def sumPlusFrac(dicSAM,clsEOS) :
 
-    nSamp = clsEOS.NS
-    nUser = clsEOS.NU
-    nComp = clsEOS.NC
+    nSamp = len(dicSAM)
+    nUser = clsEOS.nUser
+    nComp = clsEOS.nComp
 
     for iSamp in range(nSamp) :
         sPlus = 0.0
-        for iC in range(nUser-1,nComp) :
-            sPlus = sPlus + dicSAM[iSamp].gZI(iC)
+        for iC in range(nUser-1,nComp) : sPlus = sPlus + dicSAM[iSamp].gZI(iC)
         dicSAM[iSamp].sZI(nUser-1,sPlus)
-        for iC in range(nUser,nComp) :
-            dicSAM[iSamp].sZI(iC,0.0)            
+        for iC in range(nUser,nComp)   : dicSAM[iSamp].sZI(iC,0.0)            
 
 #========================================================================
 #  End of Routine
@@ -682,6 +663,8 @@ def lineSearch(clsIO,dicREG,dicSAM0,dicSAM1,clsEOS0,clsEOS1,dicEXP,qExp,fun0,xVe
     lam2 = lamB
     fun2 = fun0
 
+    qDif = False
+
     while lamB > lamM :
 
 #-- Update variables ------------------------------------------------
@@ -689,7 +672,7 @@ def lineSearch(clsIO,dicREG,dicSAM0,dicSAM1,clsEOS0,clsEOS1,dicEXP,qExp,fun0,xVe
         for iVar in range(nVar) :
             clsREG   =   dicREG[iVar]
             xNew = xVec[iVar] + lamB*delX[iVar]
-            perturbVariable(clsREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,xNew)
+            perturbVariable(xNew,clsREG,clsEOS0,clsEOS1,dicSAM0,dicSAM1,clsIO)
 
 #-- Update C6+ component Acentric Factor and Volume Shifts ----------
 
@@ -699,7 +682,7 @@ def lineSearch(clsIO,dicREG,dicSAM0,dicSAM1,clsEOS0,clsEOS1,dicEXP,qExp,fun0,xVe
 #  Run the experiments with the Perturbed EoS (cF)
 #--------------------------------------------------------------------
 
-        runRegExps(clsIO,clsEOS1,dicSAM1,dicEXP,qExp)
+        runRegExps(qExp,qDif,clsEOS1,dicSAM1,dicEXP,clsIO)
 
 #-- And calculate the new SSQ ---------------------------------------            
 
@@ -737,7 +720,7 @@ def lineSearch(clsIO,dicREG,dicSAM0,dicSAM1,clsEOS0,clsEOS1,dicEXP,qExp,fun0,xVe
 
 def adjustAFandSS(clsEOS) :
 
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
 
     for iC in range(nCom) :
 
@@ -803,7 +786,7 @@ def updateLambda(lamB,lam2,fun0,fun1,fun2,grd0) :
 #  Run the Experiments
 #========================================================================
 
-def runRegExps(clsIO,clsEOS,dicSAM,dicEXP,qExp) :
+def runRegExps(qExp,qDif,clsEOS,dicSAM,dicEXP,clsIO) :
 
     nExp = len(dicEXP)
     fOut = None
@@ -814,6 +797,8 @@ def runRegExps(clsIO,clsEOS,dicSAM,dicEXP,qExp) :
 #  Loop over active experiments
 #----------------------------------------------------------------------
 
+    qDif = False
+
     for iExp in range(nExp) :
 
         if qExp[iExp] :  #-- Is this experiment active in regression?
@@ -822,14 +807,14 @@ def runRegExps(clsIO,clsEOS,dicSAM,dicEXP,qExp) :
 
             xTyp = clsEXP.xName
             
-            if   xTyp == "CCE" : CX.calcCCE(iExp,clsEOS,dicSAM,clsEXP,clsIO)
-            elif xTyp == "CVD" : CX.calcCVD(iExp,clsEOS,dicSAM,clsEXP,clsIO)
-            elif xTyp == "DLE" : CX.calcDLE(iExp,clsEOS,dicSAM,clsEXP,clsIO)
-            elif xTyp == "SEP" : CX.calcSEP(iExp,clsEOS,dicSAM,clsEXP,clsIO)
-            elif xTyp == "FLS" : CX.calcFLS(iExp,clsEOS,dicSAM,clsEXP,clsIO)
-            elif xTyp == "SAT" : CX.calcSAT(iExp,clsEOS,dicSAM,clsEXP,clsIO)
-            elif xTyp == "SWL" : CX.calcSWL(iExp,clsEOS,dicSAM,clsEXP,clsIO)
-            elif xTyp == "GRD" : CX.calcGRD(iExp,clsEOS,dicSAM,clsEXP,clsIO)
+            if   xTyp == "CCE" : CX.calcCCE(iExp,qDif,clsEOS,dicSAM,clsEXP,clsIO)
+            elif xTyp == "CVD" : CX.calcCVD(iExp,qDif,clsEOS,dicSAM,clsEXP,clsIO)
+            elif xTyp == "DLE" : CX.calcDLE(iExp,qDif,clsEOS,dicSAM,clsEXP,clsIO)
+            elif xTyp == "SEP" : CX.calcSEP(iExp,qDif,clsEOS,dicSAM,clsEXP,clsIO)
+            elif xTyp == "FLS" : CX.calcFLS(iExp,qDif,clsEOS,dicSAM,clsEXP,clsIO)
+            elif xTyp == "SAT" : CX.calcSAT(iExp,qDif,clsEOS,dicSAM,clsEXP,clsIO)
+            elif xTyp == "SWL" : CX.calcSWL(iExp,qDif,clsEOS,dicSAM,clsEXP,clsIO)
+            elif xTyp == "GRD" : CG.calcGRD(iExp,qDif,clsEOS,dicSAM,clsEXP,clsIO)
 
 #======================================================================
 #  End of Routine
@@ -846,10 +831,8 @@ def calcResSSQ(qWrt,dicEXP,qExp,clsIO) :
     nExp = len(dicEXP)
     nReg = 0
 
-    sExN = [" " for i in range(nExp)]
-
-    nCCE = 0 ; nCVD = 0 ; nDLE = 0 ; nSEP = 0
-    nFLS = 0 ; nSAT = 0 ; nSWL = 0 ; nGRD = 0
+    numTyp = {'CCE':0,'CVD':0,'DLE':0,'SEP':0, \
+              'FLS':0,'SAT':0,'SWL':0,'GRD':0}
 
     regI = []
 
@@ -862,32 +845,11 @@ def calcResSSQ(qWrt,dicEXP,qExp,clsIO) :
         nRow = clsEXP.nRow
         nObs = clsEXP.nObs
 
-        xTyp = clsEXP.xName
+        xTyp = clsEXP.xName     #-- Exp Type [see numTyp]
 
-        if   xTyp == "CCE" :
-            nCCE += 1
-            xTyp = xTyp + str(nCCE)
-        elif xTyp == "CVD" :
-            nCVD += 1
-            xTyp = xTyp + str(nCVD)
-        elif xTyp == "DLE" :
-            nDLE += 1
-            xTyp = xTyp + str(nDLE)
-        elif xTyp == "SEP" :
-            nSEP += 1
-            xTyp = xTyp + str(nSEP)
-        elif xTyp == "FLS" :
-            nFLS += 1
-            xTyp = xTyp + str(nFLS)
-        elif xTyp == "SAT" :
-            nSAT += 1
-            xTyp = xTyp + str(nSAT)
-        elif xTyp == "SWL" :
-            nSWL += 1
-            xTyp = xTyp + str(nSWL)
-        elif xTyp == "GRD" :
-            nGRD += 1
-            xTyp = xTyp + str(nGRD)
+        numTyp[xTyp] += 1       #-- Number of Times this Type
+
+        xOut = xTyp + str(numTyp[xTyp])
 
         #print("calcResSSQ: iExp,nObs,nRow,qExp ",iExp,nObs,nRow,qExp[iExp])
 
@@ -907,7 +869,7 @@ def calcResSSQ(qWrt,dicEXP,qExp,clsIO) :
                     regI.append(dVal)
                     nReg += 1
                     if qWrt :
-                        rowR = [xTyp,sObs,sStg,clsEXP.PsatW,clsEXP.PsatO,clsEXP.PsatC]
+                        rowR = [xOut,sObs,sStg,clsEXP.PsatW,clsEXP.PsatO,clsEXP.PsatC]
                         regO.append(rowR)
 
 #== Array-based observations ==========================================        
@@ -920,21 +882,23 @@ def calcResSSQ(qWrt,dicEXP,qExp,clsIO) :
 
                     for iRow in range(nRow) :
 
-                        sStg = "{:7.1f}".format(clsEXP.dDep[iRow][0])
+                        sStg = "{:7.1f}".format(clsEXP.dInd[0][iRow])
 
-                        if clsEXP.dWei[iRow][iObs] > 0.0 and \
-                           clsEXP.dObs[iRow][iObs] > 0.0     :
+                        dWei = clsEXP.dWei[iObs][iRow]
+                        dObs = clsEXP.dObs[iObs][iRow]
+                        dCal = clsEXP.dCal[iObs][iRow]
+
+                        if dWei > 0.0 and dObs > 0.0 :
                             
                             if sObs == "SLIQ" or sObs == "MREM" : cDiv = 1.0
-                            else                                : cDiv = 1.0/clsEXP.dObs[iRow][iObs]
-                            #cDiv = 1.0/clsEXP.dObs[iRow][iObs]
+                            else                                : cDiv = 1.0/dObs
 
-                            dVal = clsEXP.dWei[iRow][iObs]*(clsEXP.dObs[iRow][iObs] - clsEXP.dCal[iRow][iObs])*cDiv
+                            dVal = dWei*(dObs - dCal)*cDiv
                             regI.append(dVal)
                             nReg += 1
 
                             if qWrt :
-                                rowR = [xTyp,sObs,sStg,clsEXP.dWei[iRow][iObs],clsEXP.dObs[iRow][iObs],clsEXP.dCal[iRow][iObs]]
+                                rowR = [xOut,sObs,sStg,dWei,dObs,dCal]
                                 regO.append(rowR)
 
 #----------------------------------------------------------------------
@@ -942,8 +906,7 @@ def calcResSSQ(qWrt,dicEXP,qExp,clsIO) :
 #----------------------------------------------------------------------
 
     dSSQ = 0.0
-    for iReg in range(nReg) :
-        dSSQ = dSSQ + regI[iReg]*regI[iReg]
+    for iReg in range(nReg) : dSSQ = dSSQ + regI[iReg]*regI[iReg]
 
     dSSQ = 0.5*dSSQ
 
@@ -953,242 +916,13 @@ def calcResSSQ(qWrt,dicEXP,qExp,clsIO) :
 #  Output the Regression Information to reg-file?
 #----------------------------------------------------------------------
 
-    if qWrt :
-
-        fReg = clsIO.fReg
-        ssqS = 50.0/dSSQ
-        sLst = ""
-
-#                12iReg12EXPx12OBSV12 Stage 12Weight12 Observed 12Calculated12 Residual 12 FracSSQ
-        sLine = "  ----  ----  ----  -------  ------  ----------  ----------  ----------  ----------"
-        sHead = "  iReg  EXP   Quan   Stage   Weight   Observed   Calculated   Residual    FracSSQ  "
-
-        fReg.write(sLine+"\n")
-        fReg.write(sHead+"\n")
-
-        for iReg in range(nReg) :
-            
-            sReg  = "{:4d}".format(iReg+1)
-            
-            sExp  = regO[iReg][0]
-            sQua  = regO[iReg][1].ljust(4)
-            sStg  = regO[iReg][2]
-            
-            dWei  = regO[iReg][3]
-            dObs  = regO[iReg][4]
-            dCal  = regO[iReg][5]
-            dRes  = regI[iReg]
-            fSSQ  = ssqS*dRes*dRes
-
-            sWei  =  "{:6.2f}".format(dWei)
-            sObs  = "{:10.4f}".format(dObs)
-            sCal  = "{:10.4f}".format(dCal)
-            sRes  =  "{:8.4f}".format(dRes)
-            sSSQ  = "{:10.4f}".format(fSSQ)
-
-            if sExp != sLst : fReg.write(sLine+"\n")
-            sLst = sExp
-            
-            sFReg = "  " + sReg + "  " + sExp + "  " + sQua + "  " + sStg + \
-                    "  " + sWei + "  " + sObs + "  " + sCal + "  " + sRes + "  " + sSSQ + "\n"
-
-            fReg.write(sFReg)
-
-        fReg.write(sLine+"\n")
+    if qWrt : WR.outRegInfo(nReg,dSSQ,regO,regI,clsIO)
 
 #======================================================================
 #  Return SSQ and Residual Vector
 #======================================================================
 
     return dSSQ,regI
-
-#========================================================================
-#  Diagnostics on the Hessian Matrix for Output Purposes
-#========================================================================
-
-def diagnoseHess(nIter,detM,iOrd,eVal,eVec,dicREG,dicSAM,clsEOS,clsIO) :
-
-    eTst = 1.0E-08      #-- Might want to change this value?
-                        #-- Is consistent with value in calcYvec!
-
-    fReg = clsIO.fReg
-    nVar = len(eVal)
-
-    sHead = "---------------------------------------\n"
-    sLine = "  Regression Iteration (Diagnosis): " + str(nIter) + "\n"
-
-    fReg.write("\n")
-    fReg.write(sHead)
-    fReg.write(sLine)
-    fReg.write(sHead)
-    #fReg.write("\n")
-
-#-- Determinant Output ----------------------------------------------    
-
-    sLabl = "  Determinant of the Hessian Matrix = {:12.5e}\n".format(detM)
-
-    fReg.write("\n")
-    fReg.write(sLabl)
-    fReg.write("\n")
-
-#== Eigenvalues =======================================================
-
-    eMax = 0.0
-
-    for iVar in range(nVar) :
-        eMax = max(eMax,eVal[iVar])
-
-#            12IV12vType12  xMin  12  xVec  12  xMax  12  delX  12  Bounded?  12Comps/Samps
-    sLine = "  IV  vType  EigenValue  Remove?  Comps/Samp\n"
-    sHead = "  --  -----  ----------  -------  ----------\n"
-    fReg.write(sHead)
-    fReg.write(sLine)
-    fReg.write(sHead)
-
-    for jVar in range(nVar) :
-
-        iVar = iOrd[jVar]
-
-        eRat = eVal[iVar]/eMax
-
-        if eRat < eTst : sRem = "Yes".center(7)
-        else           : sRem =  "No".center(7)
-
-        clsREG = dicREG[iVar]
-
-        sNam = clsREG.vNam.ljust(5)
-        sTyp = clsREG.vTyp
-
-        sNum =    "{:2d}".format(iVar+1)
-        sVal = "{:10.3e}".format(eVal[iVar])
-
-        sExt = regVarInfo(sTyp,clsREG,clsEOS,dicSAM)
-
-        sLine = "  " + sNum + "  " + sNam + "  " + sVal + "  " + \
-                       sRem + "  " + sExt + "\n"
-        fReg.write(sLine)
-
-    fReg.write("\n")
-
-#== Eigenvectors =====================================================
-
-    fReg.write("  Eigenvector Dependencies?\n")
-    fReg.write("\n")
-
-    sHead = "  ---  "
-    sLine = "  VAR  "
-    
-    for iC in range(nVar-1) :
-        sVar  = "{:3d}".format(iC+1)
-        sHead = sHead + "---  "
-        sLine = sLine + sVar + "  "
-
-    sHead = sHead + "\n"
-    sLine = sLine + "\n"
-
-    fReg.write(sHead)
-    fReg.write(sLine)
-    fReg.write(sHead)
-    fReg.write("\n")
-
-    for iC in range(1,nVar) :
-
-        iVar = iOrd[iC]
-        
-        sVar  = "{:3d}".format(iVar+1)
-        sLine = "  " + sVar + "  "
-        
-        for jC in range(iC) :
-
-            jVar = iOrd[jC]
-            
-            dotP = NP.inner(eVec[:,iVar],eVec[:,jVar])
-            dTst = abs(dotP - 1.0)
-            
-            if dTst < 1.0E-05 : sDI = "Yes"
-            else              : sDI = "No "
-            
-            sLine = sLine + sDI + "  "
-            
-        sLine = sLine + "\n"
-        fReg.write(sLine)
-
-    fReg.write("\n")
-
-#========================================================================
-#  End of Routine
-#========================================================================
-
-    return
-
-#========================================================================
-#  Information on a Regression Variable (for Output)
-#========================================================================
-
-def regVarInfo(sTyp,clsREG,clsEOS,dicSAM) :
-    
-    sExt = ""
-
-    if   sTyp == "REG" or sTyp == "LBC" :   #-- Regular Variable
-        iGrp = clsREG.vGrp
-        for jGrp in range(len(iGrp)) :
-            iOne = iGrp[jGrp]
-            sThs = clsEOS.gPP("CN",iOne)
-            sExt = sExt + sThs + ", "
-        sExt = sExt[:-2]
-    elif sTyp == "KIJ" :                    #-- Binary
-        iOne = clsREG.vOne
-        sOne = clsEOS.gPP("CN",iOne)
-        sExt = sExt + sOne + "->"
-        iGrp = clsREG.vGrp
-        for jGrp in range(len(iGrp)) :
-            iOne = iGrp[jGrp]
-            sThs = clsEOS.gPP("CN",iOne)
-            sExt = sExt + sThs + ", "
-        sExt = sExt[:-2]
-    elif sTyp == "PLS" :                    #-- Plus Fraction Variable
-        iSam = clsREG.vSam
-        sSam = dicSAM[iSam].sName
-        sExt = sExt + sSam
-
-#========================================================================
-#  End of Routine
-#========================================================================
-
-    return sExt
-
-#========================================================================
-#  Write a Vector
-#========================================================================
-
-def writeVector(sVec,vecT) :
-
-    print(sVec," ",end="")
-
-    for eVal in vecT :
-        print(" {:10.3e}".format(eVal),end="")
-    print(end="\n")
-
-#== Return ============================================================        
-        
-    return
-
-#========================================================================
-#  Write a Matrix
-#========================================================================
-
-def writeMatrix(sMat,matX) :
-
-    print(sMat)
-
-    for dVec in matX :
-        for dVal in dVec :
-            print(" {:10.3e}".format(dVal),end="")
-        print(end="\n")
-
-#== Return ============================================================        
-        
-    return
 
 #========================================================================
 #  Regression Variable "Type"; REG, PLUS or LBC

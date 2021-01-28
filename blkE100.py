@@ -9,14 +9,17 @@
 
 #!/usr/bin/python3
 
-import blkOther as BO
-import blkProps as BP
-import genPlots as GP
+import blkGrad   as BG
+import blkOther  as BO
+import blkProps  as BP
+import plotBatch as PB
 
 def outE100(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
     oTyp = clsBLK.oTyp
     gTyp = clsBLK.gTyp
+
+    qDep = clsBLK.qDep
 
 #== Oil Keywords =====================================================
 
@@ -41,9 +44,15 @@ def outE100(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
     elif gTyp == "PVTG" :
         fGas = outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO)
 
+#== Composition versus Depth information? ============================
+
+    if qDep :
+
+        pass
+    
 #== Plot the Data ====================================================
 
-    GP.blackPlots(dTab,eTab,fOil,fGas,clsBLK,clsUNI)
+    PB.blackPlots(dTab,eTab,fOil,fGas,clsBLK,clsUNI,clsIO)
 
 #== No return values =================================================
 
@@ -193,9 +202,10 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
             Pr    = dTab[jSat][clsBLK.iPr]
             RTp   = clsBLK.RT/Pr
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK)
 
-            if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            #if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            Uo = BP.calcUndViscStand(Pb,Ub,Pr)
             
             outputPVTOund(f100,Pr,Bo,Uo,sExt,clsBLK,clsIO,clsUNI)
 
@@ -216,9 +226,10 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
             Pr    = eTab[jExt][clsBLK.iPr]
             RTp   = clsBLK.RT/Pr
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK)
             
-            if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            #if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            Uo = BP.calcUndViscStand(Pb,Ub,Pr)
             
             outputPVTOund(f100,Pr,Bo,Uo,sExt,clsBLK,clsIO,clsUNI)
 
@@ -270,9 +281,10 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
 
             Pr    = eTab[jExt][clsBLK.iPr]
             RTp   = clsBLK.RT/Pr
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK)
             
-            if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            #if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            Uo = BP.calcUndViscStand(Pb,Ub,Pr)
             
             outputPVTOund(f100,Pr,Bo,Uo,sExt,clsBLK,clsIO,clsUNI)
 
@@ -289,9 +301,10 @@ def outPVTO(f100,dTab,eTab,sOil,sGas,rOil,rGas,qMonV,clsBLK,clsUNI,clsIO) :
             
             Pr   = Pr + pInc
             RTp  = clsBLK.RT/Pr
-            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK,clsIO)
+            Bo,Uo = BO.calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rb,clsBLK)
 
-            if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            #if not qMonV : Uo = BP.calcUndViscStand(Pb,Ub,Pr)
+            Uo = BP.calcUndViscStand(Pb,Ub,Pr)
 
             dRow = [Pr,Bo,Uo]
             fCol.append(dRow)
@@ -377,9 +390,9 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
     iExt = nExt - 1
 
     qVap = False
-    cCon = clsBLK.Co
-    dSTO = clsBLK.dSTO
-    dSTG = clsBLK.dSTG
+    Tres = clsBLK.Tres ; cCon = clsBLK.Co
+    dSTO = clsBLK.dSTO ; dSTG = clsBLK.dSTG
+    mSTO = clsBLK.mSTO ; mSTG = clsBLK.mSTG
 
     fGas = []   #-- Store Under-Saturated Gas Data for Plotting
 
@@ -401,6 +414,8 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
         Bd  = dTab[iSat][clsBLK.iBg]
         Ud  = dTab[iSat][clsBLK.iUg]
 
+        UG = BO.gasViscLee(Rd,Bd,Tres,clsBLK)
+
         dRow = [Rd,Bd,Ud,Pd]
         fCol.append(dRow)
         
@@ -418,7 +433,7 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
         while jSat < nSat :
 
             Rv = dTab[jSat][clsBLK.iRv]
-            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
+            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK)
             outputPVTGund(f100,Rv,Bg,Ug,sExt,clsBLK,clsIO,clsUNI)
 
             dRow = [Rv,Bg,Ug]
@@ -432,7 +447,7 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 
         sExt = "  /\n"
         Rv   = 0.0
-        Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
+        Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK)
         outputPVTGund(f100,Rv,Bg,Ug,sExt,clsBLK,clsIO,clsUNI)
 
 #== Decrement the iSat counter ========================================
@@ -458,6 +473,8 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
         Bd  = eTab[iExt][clsBLK.iBg]
         Ud  = eTab[iExt][clsBLK.iUg]
 
+        UG = BO.gasViscLee(Rd,Bd,Tres,clsBLK)
+
         dRow = [Rd,Bd,Ud,Pd]
         fCol.append(dRow)
         
@@ -471,7 +488,7 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
         while jExt < nExt :
 
             Rv = eTab[jExt][clsBLK.iRv]
-            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
+            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK)
             outputPVTGund(f100,Rv,Bg,Ug,sExt,clsBLK,clsIO,clsUNI)
 
             dRow = [Rv,Bg,Ug]
@@ -489,7 +506,7 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
         while jSat < nSat :
 
             Rv = dTab[jSat][clsBLK.iRv]
-            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
+            Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK)
             outputPVTGund(f100,Rv,Bg,Ug,sExt,clsBLK,clsIO,clsUNI)
 
             dRow = [Rv,Bg,Ug]
@@ -507,7 +524,7 @@ def outPVTG(f100,dTab,eTab,sOil,sGas,rOil,rGas,clsBLK,clsUNI,clsIO) :
 
         sExt = "  /\n"
         Rv   = 0.0
-        Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK,clsIO)
+        Bg,Ug = BO.calcSatProp(qVap,RTp,cCon,dSTO,dSTG,Rv,clsBLK)
         outputPVTGund(f100,Rv,Bg,Ug,sExt,clsBLK,clsIO,clsUNI)
 
         dRow = [Rv,Bg,Ug]
@@ -535,7 +552,7 @@ def outputHeaderOil(fSim,clsBLK,clsIO) :
     oTyp = clsBLK.oTyp
 
     uUni = "     cP    "
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         rUni = "  SM3/SM3  "
         pUni = "    BARA   "
         bUni = "  RM3/SM3  "
@@ -578,7 +595,7 @@ def outputHeaderGas(fSim,clsBLK,clsIO) :
     gTyp = clsBLK.gTyp
 
     uUni = "     cP    "
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         pUni = "    BARA   "
         rUni = "  SM3/SM3  "
         bUni = "  RM3/SM3  "
@@ -628,7 +645,7 @@ def outputPVTOsat(fSim,iRow,fTab,sExt,clsBLK,clsIO,clsUNI) :
         Co = 0.0
         Vo = 0.0
 
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         Pr = clsUNI.I2X(Pr,"bara")
         Co = clsUNI.I2X(Pr,"1/bar")
         Vo = clsUNI.I2X(Pr,"1/bar")
@@ -677,7 +694,7 @@ def outputPVTGsat(fSim,iRow,fTab,sExt,clsBLK,clsIO,clsUNI) :
         Bg = fTab[iRow][clsBLK.iBg]
         Ug = fTab[iRow][clsBLK.iUg]
 
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         Pr   = clsUNI.I2X(Pr,"bara")
         sRv  = " {:10.3e}".format(Rv)
         sBg  = " {:10.3e}".format(Bg)
@@ -707,8 +724,7 @@ def outputPVTOund(fSim,Pr,Bo,Uo,sExt,clsBLK,clsIO,clsUNI) :
 
     OutU = clsBLK.OutU               #-- FLD (Field) or MET (Metric)
 
-    if OutU == "MET" :
-        Pr   = clsUNI.I2X(Pr,"bara")
+    if OutU[:3] == "MET" : Pr   = clsUNI.I2X(Pr,"bara")
 
     sRs = "           "
     sPr = " {:10.3f}".format(Pr)
@@ -729,7 +745,7 @@ def outputPVTGund(fSim,Rv,Bg,Ug,sExt,clsBLK,clsIO,clsUNI) :
 
     OutU = clsBLK.OutU               #-- FLD (Field) or MET (Metric)
 
-    if OutU == "MET" :
+    if OutU[:3] == "MET" :
         sRv = " {:10.3e}".format(Rv)
         sBg = " {:10.3e}".format(Bg)
     else :

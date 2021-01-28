@@ -12,9 +12,12 @@
 
 import numpy     as NP
 
+import sys
+
 import blkCoefs  as BC
 import blkProps  as BP
 import calcReg   as CR
+import utilities as UT
 
 #========================================================================
 #  Fit the 2-Component (STO & STG) Viscosity Parameters to Saturated Data
@@ -56,7 +59,7 @@ def regViscData(dTab,cTab,dicSAM,clsEOS,clsBLK,clsIO) :
 
 #== Jacobian Matrix ===================================================
 
-        jacB = calcJacVISBoth(uOil,uGas,xOil,yOil,dOil,dGas,clsBLK,clsIO)
+        jacB = calcJacVISBoth(uOil,uGas,xOil,yOil,dOil,dGas,clsBLK)
 
 #== Assemble the Gradient Vector and Hessian Matrix ===================
 
@@ -70,6 +73,8 @@ def regViscData(dTab,cTab,dicSAM,clsEOS,clsBLK,clsIO) :
 #== Initial Residual Vector ===========================================    
 
         ssqT,res0 = lineSearchVIS(ssqL,delX,Grad,uOil,uGas,xOil,yOil,dOil,dGas,clsBLK,clsIO)
+
+        #print("regViscData: nIter,ssqT ",nIter,ssqT)
 
 #======================================================================
 #  Progress in SSQ?
@@ -86,6 +91,9 @@ def regViscData(dTab,cTab,dicSAM,clsEOS,clsBLK,clsIO) :
         if nIter > 5 :
             #print("Regression - Too Many Iterations")
             break
+
+    #xVec = storeVIScoefs(clsBLK)
+    #UT.writeVector(sys.stdout,'xVec',xVec,'D')
 
 #========================================================================
 #  Fit Saturated Viscosities, one pair at a time
@@ -127,8 +135,8 @@ def calcResVISBoth(uOil,uGas,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
 
 #-- Calculate Residuals for each phase individually -----------------    
 
-    ssqL,resL = calcResVISPhase(uOil,xOil,dOil,clsBLK,clsIO)
-    ssqV,resV = calcResVISPhase(uGas,yOil,dGas,clsBLK,clsIO)
+    ssqL,resL = calcResVISPhase('Liq',uOil,xOil,dOil,clsBLK,clsIO)
+    ssqV,resV = calcResVISPhase('Vap',uGas,yOil,dGas,clsBLK,clsIO)
 
 #-- And then combine them into one array (Oil, then Gas) ------------    
 
@@ -146,10 +154,7 @@ def calcResVISBoth(uOil,uGas,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
 #  Calculate Residuals for Oil or Gas Viscosity
 #========================================================================
 
-def calcResVISPhase(uObs,xOil,dOil,clsBLK,clsIO) :
-
-    if clsIO.Deb["BLACK"] > 0 : qDeb = True
-    else                      : qDeb = False
+def calcResVISPhase(sPhs,uObs,xOil,dOil,clsBLK,clsIO) :
 
     nSat = len(uObs)
 
@@ -158,12 +163,11 @@ def calcResVISPhase(uObs,xOil,dOil,clsBLK,clsIO) :
 
     for iSat in range(nSat) :
 
-        uCal = BP.calcLBCvisc(xOil[iSat],dOil[iSat],clsBLK,clsIO)
+        uCal = BP.calcLBCvisc(xOil[iSat],dOil[iSat],clsBLK)
 
         resP[iSat] = (uCal - uObs[iSat])/uObs[iSat]
 
-        if qDeb :
-            print("iS,uO,uC,rP {:2d} {:10.3e} {:10.3e} {:10.3e}".format(iSat,uObs[iSat],uCal,resP[iSat]))
+        #print("Phase,iS,uO,uC,rP {:3s} {:2d} {:10.3e} {:10.3e} {:10.3e}".format(sPhs,iSat,uObs[iSat],uCal,resP[iSat]))
         
         ssQ = ssQ + resP[iSat]*resP[iSat]
 
@@ -171,7 +175,7 @@ def calcResVISPhase(uObs,xOil,dOil,clsBLK,clsIO) :
 
     ssQ = 0.5*ssQ
 
-    if qDeb : print("ssQ {:10.3e}".format(ssQ))
+    #print("ssQ {:10.3e}".format(ssQ))
 
     return ssQ,resP
 
@@ -179,7 +183,7 @@ def calcResVISPhase(uObs,xOil,dOil,clsBLK,clsIO) :
 #  Calculate Jacobian for Oil AND Gas Viscosity
 #========================================================================
 
-def calcJacVISBoth(uObs,uGas,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
+def calcJacVISBoth(uObs,uGas,xOil,yOil,dOil,dGas,clsBLK) :
 
     nSat = len(uObs)
     nRes = 2*nSat
@@ -189,8 +193,8 @@ def calcJacVISBoth(uObs,uGas,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
 
 #-- Calculate Jacobians for each phase individually -----------------
 
-    jacL = calcJacVISPhase(uObs,xOil,dOil,clsBLK,clsIO)
-    jacV = calcJacVISPhase(uGas,yOil,dGas,clsBLK,clsIO)
+    jacL = calcJacVISPhase(uObs,xOil,dOil,clsBLK)
+    jacV = calcJacVISPhase(uGas,yOil,dGas,clsBLK)
 
 #== And then "add" Oil & Gas Jacobians together =======================
 
@@ -206,7 +210,7 @@ def calcJacVISBoth(uObs,uGas,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
 #  Calculate Jacobian for Oil or Gas Viscosity
 #========================================================================
 
-def calcJacVISPhase(uObs,xOil,dOil,clsBLK,clsIO) :
+def calcJacVISPhase(uObs,xOil,dOil,clsBLK) :
 
     nSat = len(uObs)
     nEOS = clsBLK.nEOS
@@ -217,13 +221,13 @@ def calcJacVISPhase(uObs,xOil,dOil,clsBLK,clsIO) :
 
     for iSat in range(nSat) :
 
-        rCof = BC.Rcoef(xOil[iSat],clsBLK,clsIO)
-        eCof = BC.Ecoef(xOil[iSat],clsBLK,clsIO)
+        rCof = BC.Rcoef(xOil[iSat],clsBLK)
+        eCof = BC.Ecoef(xOil[iSat],clsBLK)
 
         dRed = dOil[iSat]/rCof
 
-        sumV = BP.sumVisc(dRed,clsIO)
-        sumD = BP.sumDerv(dRed,clsIO)
+        sumV = BP.sumVisc(dRed)
+        sumD = BP.sumDerv(dRed)
 
         drduC = 1.0/uObs[iSat]
 
@@ -235,14 +239,14 @@ def calcJacVISPhase(uObs,xOil,dOil,clsBLK,clsIO) :
         dudu =                      1.0/ uObs[iSat]
         dude = - (pow(sumV,4) - 0.0001)/(uObs[iSat]*eCof*eCof)
 
-        drdRo = dudr*BC.dRdRo(xOil[iSat],clsBLK,clsIO)
-        drdRg = dudr*BC.dRdRg(xOil[iSat],clsBLK,clsIO)
+        drdRo = dudr*BC.dRdRo(xOil[iSat],clsBLK)
+        drdRg = dudr*BC.dRdRg(xOil[iSat],clsBLK)
 
-        drdEo = dude*BC.dEdEo(xOil[iSat],clsBLK,clsIO)
-        drdEg = dude*BC.dEdEg(xOil[iSat],clsBLK,clsIO)
+        drdEo = dude*BC.dEdEo(xOil[iSat],clsBLK)
+        drdEg = dude*BC.dEdEg(xOil[iSat],clsBLK)
 
-        drdUo = dudu*BC.dMdUo(xOil[iSat],clsBLK,clsIO)
-        drdUg = dudu*BC.dMdUg(xOil[iSat],clsBLK,clsIO)
+        drdUo = dudu*BC.dMdUo(xOil[iSat],clsBLK)
+        drdUg = dudu*BC.dMdUg(xOil[iSat],clsBLK)
 
         jacO[0][iSat] = drdRo ; jacO[3][iSat] = drdRg
         jacO[1][iSat] = drdEo ; jacO[4][iSat] = drdEg
@@ -275,7 +279,7 @@ def lineSearchVIS(fun0,delX,Grad,uOil,uGas,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
 
 #== Create Work Array to Hold Current EOS Multipliers =================
 
-    xVec = storeVIScoefs(clsBLK,clsIO)
+    xVec = storeVIScoefs(clsBLK)
 
 #----------------------------------------------------------------------
 #  Find the Lambda Parameter
@@ -306,12 +310,12 @@ def lineSearchVIS(fun0,delX,Grad,uOil,uGas,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
             for iVar in range(nVar) :
                 xVec[iVar] = xVec[iVar] + lamB*delX[iVar]
                 
-            restoreVIScoefs(xVec,clsBLK,clsIO)
+            restoreVIScoefs(xVec,clsBLK)
             break
 
         elif lamB < lamM :
 
-            restoreVIScoefs(xVec,clsBLK,clsIO)
+            restoreVIScoefs(xVec,clsBLK)
             break
 
         else :
@@ -330,7 +334,7 @@ def lineSearchVIS(fun0,delX,Grad,uOil,uGas,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
 #  Work Array for Current Viscosity Parameters
 #========================================================================
 
-def storeVIScoefs(clsBLK,clsIO) :
+def storeVIScoefs(clsBLK) :
 
     nEOS = clsBLK.nEOS
 
@@ -349,7 +353,7 @@ def storeVIScoefs(clsBLK,clsIO) :
 #  Restore the Viscosity Parameters
 #========================================================================
 
-def restoreVIScoefs(xVec,clsBLK,clsIO) :
+def restoreVIScoefs(xVec,clsBLK) :
 
     nEOS = clsBLK.nEOS
 
@@ -375,16 +379,6 @@ def updateVIScoefs(xVec,lamB,delX,clsBLK,clsIO) :
     clsBLK.VIS1["eGas"] = xVec[4] + lamB*delX[4]
     clsBLK.VIS1["uGas"] = xVec[5] + lamB*delX[5]
 
-    rOM = clsBLK.VIS1["rOil"]
-    eOM = clsBLK.VIS1["eOil"]
-    uOM = clsBLK.VIS1["uOil"]
-
-    rGM = clsBLK.VIS1["rGas"]
-    eGM = clsBLK.VIS1["eGas"]
-    uGM = clsBLK.VIS1["uGas"]
-
-    #print("rO,eO,uO,rG,eG,uG {:10.3e} {:10.3e} {:10.3e} {:10.3e} {:10.3e} {:10.3e}".format(rOM,eOM,uOM,rGM,eGM,uGM))
-
     return
 
 #========================================================================
@@ -400,9 +394,9 @@ def fitSatVisc(uOobs,uGobs,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
 
         nIter += 1
 
-        rO,rG = resSatVisc(uOobs,uGobs,xOil,yOil,dOil,dGas,clsBLK,clsIO)
+        rO,rG = resSatVisc(uOobs,uGobs,xOil,yOil,dOil,dGas,clsBLK)
 
-        jOO,jOG,jGO,jGG = jacSatVisc(uOobs,uGobs,xOil,yOil,dOil,dGas,clsBLK,clsIO)
+        jOO,jOG,jGO,jGG = jacSatVisc(uOobs,uGobs,xOil,yOil,dOil,dGas,clsBLK)
 
         drO,drG = solveSat(rO,rG,jOO,jOG,jGO,jGG,clsBLK,clsIO)
 
@@ -428,10 +422,10 @@ def fitSatVisc(uOobs,uGobs,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
 #  Residuals for Fit Saturated Viscosities [2 variables in 2 unknowns]
 #========================================================================
 
-def resSatVisc(uOobs,uGobs,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
+def resSatVisc(uOobs,uGobs,xOil,yOil,dOil,dGas,clsBLK) :
 
-    uOcal = BP.calcLBCvisc(xOil,dOil,clsBLK,clsIO)
-    uGcal = BP.calcLBCvisc(yOil,dGas,clsBLK,clsIO)
+    uOcal = BP.calcLBCvisc(xOil,dOil,clsBLK)
+    uGcal = BP.calcLBCvisc(yOil,dGas,clsBLK)
 
     resO = (uOcal - uOobs)/uOobs
     resG = (uGcal - uGobs)/uGobs
@@ -442,15 +436,15 @@ def resSatVisc(uOobs,uGobs,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
 #  Jacobian for Fit Saturated Viscosities [2 variables in 2 unknowns]
 #========================================================================
 
-def jacSatVisc(uOobs,uGobs,xOil,yOil,dOil,dGas,clsBLK,clsIO) :
+def jacSatVisc(uOobs,uGobs,xOil,yOil,dOil,dGas,clsBLK) :
 
-    duOdR = BP.calcLBCderv(xOil,dOil,clsBLK,clsIO)
-    duGdR = BP.calcLBCderv(yOil,dGas,clsBLK,clsIO)
+    duOdR = BP.calcLBCderv(xOil,dOil,clsBLK)
+    duGdR = BP.calcLBCderv(yOil,dGas,clsBLK)
 
-    jacOO = duOdR*BC.dRdRo(xOil,clsBLK,clsIO)/uOobs
-    jacOG = duOdR*BC.dRdRg(xOil,clsBLK,clsIO)/uOobs
-    jacGO = duGdR*BC.dRdRo(yOil,clsBLK,clsIO)/uGobs
-    jacGG = duGdR*BC.dRdRg(yOil,clsBLK,clsIO)/uGobs
+    jacOO = duOdR*BC.dRdRo(xOil,clsBLK)/uOobs
+    jacOG = duOdR*BC.dRdRg(xOil,clsBLK)/uOobs
+    jacGO = duGdR*BC.dRdRo(yOil,clsBLK)/uGobs
+    jacGG = duGdR*BC.dRdRg(yOil,clsBLK)/uGobs
 
     return jacOO,jacOG,jacGO,jacGG
 

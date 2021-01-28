@@ -176,12 +176,12 @@ def calcResEOSPhase(pObs,xOil,vOil,clsBLK,clsIO) :
 
     for iSat in range(nSat) :
 
-        aCof = BC.Acoef(xOil[iSat],clsBLK,clsIO)
-        bCof = BC.Bcoef(xOil[iSat],clsBLK,clsIO)
-        cCof = BC.Ccoef(xOil[iSat],clsBLK,clsIO)
+        aCof = BC.Acoef(xOil[iSat],clsBLK)
+        bCof = BC.Bcoef(xOil[iSat],clsBLK)
+        cCof = BC.Ccoef(xOil[iSat],clsBLK)
 
-        uCof = BC.Ucoef(vOil[iSat],bCof,cCof,clsIO)
-        wCof = BC.Wcoef(vOil[iSat],bCof,cCof,clsIO)
+        uCof = BC.Ucoef(vOil[iSat],bCof,cCof)
+        wCof = BC.Wcoef(vOil[iSat],bCof,cCof)
 
         pCal = RT/uCof - aCof/wCof
 
@@ -244,12 +244,12 @@ def calcJacEOSPhase(pObs,xOil,vOil,clsBLK,clsIO) :
 
     for iSat in range(nSat) :
 
-        aCof = BC.Acoef(xOil[iSat],clsBLK,clsIO)
-        bCof = BC.Bcoef(xOil[iSat],clsBLK,clsIO)
-        cCof = BC.Ccoef(xOil[iSat],clsBLK,clsIO)
+        aCof = BC.Acoef(xOil[iSat],clsBLK)
+        bCof = BC.Bcoef(xOil[iSat],clsBLK)
+        cCof = BC.Ccoef(xOil[iSat],clsBLK)
 
-        uCof = BC.Ucoef(vOil[iSat],bCof,cCof,clsIO)
-        wCof = BC.Wcoef(vOil[iSat],bCof,cCof,clsIO)
+        uCof = BC.Ucoef(vOil[iSat],bCof,cCof)
+        wCof = BC.Wcoef(vOil[iSat],bCof,cCof)
 
         pCal = RT/uCof - aCof/wCof
 
@@ -265,14 +265,14 @@ def calcJacEOSPhase(pObs,xOil,vOil,clsBLK,clsIO) :
         drdb = drdu*dudb + drdw*dwdb
         drdc = drdu*dudc + drdw*dwdc
 
-        dAdAo = BC.dAdAo(xOil[iSat],clsBLK,clsIO)
-        dAdAg = BC.dAdAg(xOil[iSat],clsBLK,clsIO)
+        dAdAo = BC.dAdAo(xOil[iSat],clsBLK)
+        dAdAg = BC.dAdAg(xOil[iSat],clsBLK)
         
-        dBdBo = BC.dBdBo(xOil[iSat],clsBLK,clsIO)
-        dBdBg = BC.dBdBg(xOil[iSat],clsBLK,clsIO)
+        dBdBo = BC.dBdBo(xOil[iSat],clsBLK)
+        dBdBg = BC.dBdBg(xOil[iSat],clsBLK)
 
-        dCdSo = BC.dCdSo(xOil[iSat],clsBLK,clsIO)
-        dCdSg = BC.dCdSg(xOil[iSat],clsBLK,clsIO)
+        dCdSo = BC.dCdSo(xOil[iSat],clsBLK)
+        dCdSg = BC.dCdSg(xOil[iSat],clsBLK)
 
         drdAo = drda*dAdAo ; drdAg = drda*dAdAg
         drdBo = drdb*dBdBo ; drdBg = drdb*dBdBg
@@ -309,7 +309,7 @@ def lineSearchEOS(fun0,delX,Grad,pObs,xOil,yOil,vOil,vGas,clsBLK,clsIO) :
 
 #== Create Work Array to Hold Current EOS Multipliers =================
 
-    xVec = storeEOScoefs(clsBLK,clsIO)
+    xVec = storeEOScoefs(clsBLK)
 
 #----------------------------------------------------------------------
 #  Find the Lambda Parameter
@@ -321,7 +321,7 @@ def lineSearchEOS(fun0,delX,Grad,pObs,xOil,yOil,vOil,vGas,clsBLK,clsIO) :
 
 #-- Update variables ------------------------------------------------
 
-        updateEOScoefs(xVec,lamB,delX,clsBLK,clsIO)
+        updateEOScoefs(xVec,lamB,delX,clsBLK)
         
 #--------------------------------------------------------------------
 #  Run the experiments with the Perturbed EoS (cF)
@@ -340,12 +340,12 @@ def lineSearchEOS(fun0,delX,Grad,pObs,xOil,yOil,vOil,vGas,clsBLK,clsIO) :
             for iVar in range(nVar) :
                 xVec[iVar] = xVec[iVar] + lamB*delX[iVar]
                 
-            restoreEOScoefs(xVec,clsBLK,clsIO)
+            restoreEOScoefs(xVec,clsBLK)
             break
 
         elif lamB < lamM :
 
-            restoreEOScoefs(xVec,clsBLK,clsIO)
+            restoreEOScoefs(xVec,clsBLK)
             break
 
         else :
@@ -366,7 +366,7 @@ def lineSearchEOS(fun0,delX,Grad,pObs,xOil,yOil,vOil,vGas,clsBLK,clsIO) :
 #  Work Array for Current EOS Parameters
 #========================================================================
 
-def storeEOScoefs(clsBLK,clsIO) :
+def storeEOScoefs(clsBLK) :
 
     nEOS = clsBLK.nEOS
 
@@ -385,7 +385,7 @@ def storeEOScoefs(clsBLK,clsIO) :
 #  Restore the EOS Parameters
 #========================================================================
 
-def restoreEOScoefs(xVec,clsBLK,clsIO) :
+def restoreEOScoefs(xVec,clsBLK) :
 
     nEOS = clsBLK.nEOS
 
@@ -402,7 +402,7 @@ def restoreEOScoefs(xVec,clsBLK,clsIO) :
 #  Update the set of EOS Parameters
 #========================================================================
 
-def updateEOScoefs(xVec,lamB,delX,clsBLK,clsIO) :
+def updateEOScoefs(xVec,lamB,delX,clsBLK) :
 
     clsBLK.EOS1["aOil"] = xVec[0] + lamB*delX[0]
     clsBLK.EOS1["bOil"] = xVec[1] + lamB*delX[1]
@@ -436,17 +436,17 @@ def fitSatFVF(RTp,BoObs,BgObs,BoCon,BgCon,xOil,yOil,clsBLK,clsIO) :
 
         nIter += 1
 
-        rO,rG = resSatFVF(RTp,BoObs,BgObs,BoCon,BgCon,xOil,yOil,clsBLK,clsIO)
+        rO,rG = resSatFVF(RTp,BoObs,BgObs,BoCon,BgCon,xOil,yOil,clsBLK)
 
         #print("sOil,sGas {:10.3e} {:10.3e}".format(clsBLK.EOS1["sOil"],clsBLK.EOS1["sGas"] ))
         #print("rO  ,rG   {:10.3e} {:10.3e}".format(rO ,rG ))
 
-        jOO,jOG,jGO,jGG = jacSatFVF(BoObs,BgObs,BoCon,BgCon,xOil,yOil,clsBLK,clsIO)
+        jOO,jOG,jGO,jGG = jacSatFVF(BoObs,BgObs,BoCon,BgCon,xOil,yOil,clsBLK)
 
         #print("jOO,jOG {:10.3e} {:10.3e}".format(jOO,jOG))
         #print("jGO,jGG {:10.3e} {:10.3e}".format(jGO,jGG))
 
-        drO,drG = solveSat(rO,rG,jOO,jOG,jGO,jGG,clsBLK,clsIO)
+        drO,drG = solveSat(rO,rG,jOO,jOG,jGO,jGG,clsBLK)
 
         #print("drO,drG {:10.3e} {:10.3e}".format(drO,drG))
 
@@ -473,13 +473,13 @@ def fitSatFVF(RTp,BoObs,BgObs,BoCon,BgCon,xOil,yOil,clsBLK,clsIO) :
 #  Residuals for Fit Saturated FVF [2 variables in 2 unknowns]
 #========================================================================
 
-def resSatFVF(RTp,BoObs,BgObs,BoCon,BgCon,xOil,yOil,clsBLK,clsIO) :
+def resSatFVF(RTp,BoObs,BgObs,BoCon,BgCon,xOil,yOil,clsBLK) :
 
     qOil = True
     qGas = False
 
-    BoCal = BP.calcPhaseFVF(qOil,RTp,BoCon,xOil,clsBLK,clsIO)
-    BgCal = BP.calcPhaseFVF(qGas,RTp,BgCon,yOil,clsBLK,clsIO)
+    BoCal = BP.calcPhaseFVF(qOil,RTp,BoCon,xOil,clsBLK)
+    BgCal = BP.calcPhaseFVF(qGas,RTp,BgCon,yOil,clsBLK)
 
     resO = (BoCal - BoObs)/BoObs
     resG = (BgCal - BgObs)/BgObs
@@ -496,16 +496,16 @@ def resSatFVF(RTp,BoObs,BgObs,BoCon,BgCon,xOil,yOil,clsBLK,clsIO) :
 #  Jacobian for Fit Saturated FVF [2 variables in 2 unknowns]
 #========================================================================
 
-def jacSatFVF(BoObs,BgObs,BoCon,BgCon,xOil,yOil,clsBLK,clsIO) :
+def jacSatFVF(BoObs,BgObs,BoCon,BgCon,xOil,yOil,clsBLK) :
 
-    Moil = BP.phaseMw(clsBLK.mSTG,clsBLK.mSTO,xOil,clsIO)
-    Mgas = BP.phaseMw(clsBLK.mSTG,clsBLK.mSTO,yOil,clsIO)
+    Moil = BP.phaseMw(clsBLK.mSTG,clsBLK.mSTO,xOil)
+    Mgas = BP.phaseMw(clsBLK.mSTG,clsBLK.mSTO,yOil)
 
-    jOO = - BoCon*BC.dCdSo(xOil,clsBLK,clsIO)/(Moil*BoObs)
-    jOG = - BoCon*BC.dCdSg(xOil,clsBLK,clsIO)/(Moil*BoObs)
+    jOO = - BoCon*BC.dCdSo(xOil,clsBLK)/(Moil*BoObs)
+    jOG = - BoCon*BC.dCdSg(xOil,clsBLK)/(Moil*BoObs)
 
-    jGO = - BgCon*BC.dCdSo(yOil,clsBLK,clsIO)/(Mgas*BgObs)
-    jGG = - BgCon*BC.dCdSg(yOil,clsBLK,clsIO)/(Mgas*BgObs)
+    jGO = - BgCon*BC.dCdSo(yOil,clsBLK)/(Mgas*BgObs)
+    jGG = - BgCon*BC.dCdSg(yOil,clsBLK)/(Mgas*BgObs)
 
     #print("jOO,jOG {:10.3e} {:10.3e}".format(jOO,jOG))
     #print("jGO,jGG {:10.3e} {:10.3e}".format(jGO,jGG))
@@ -516,7 +516,7 @@ def jacSatFVF(BoObs,BgObs,BoCon,BgCon,xOil,yOil,clsBLK,clsIO) :
 #  Solve for Fit Saturated FVF/Viscosities [2 variables in 2 unknowns]
 #========================================================================
 
-def solveSat(rO,rG,jOO,jOG,jGO,jGG,clsBLK,clsIO) :
+def solveSat(rO,rG,jOO,jOG,jGO,jGG,clsBLK) :
 
     disc = jOO*jGG - jOG*jGO
 

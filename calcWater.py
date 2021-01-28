@@ -11,18 +11,18 @@
 
 from   math  import exp
 
-import constants as CO
+import utilities as UT
 
 #========================================================================
 #  E100 Water Properties (PVTW Keyword)
 #========================================================================
 
-def calcPVTW(clsSIM,clsIO,clsUNI) :
+def calcPVTW(clsSIM,clsUNI,clsIO) :
 
 #-- Brine Density at Surface Conditions -----------------------------    
 
-    pSur = CO.pStand
-    tSur = CO.tStand
+    pSur = UT.pStand
+    tSur = UT.tStand
     mFrc = clsSIM.bSalt
 
     dSTW,dumW = calcRoweChouDen(mFrc,tSur,pSur,clsUNI)

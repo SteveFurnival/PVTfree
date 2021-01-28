@@ -19,10 +19,9 @@ import blkCoefs  as BC
 import blkProps  as BP
 import calcFlash as CF
 import calcEOS   as CE
-import constants as CO
 import utilities as UT
 
-from math import log,log10
+from math import exp,log,log10
 
 #========================================================================
 #  Separator Flash
@@ -31,7 +30,7 @@ from math import log,log10
 def sepFlash(iRat,pSep,tSep,Lsep,Vsep,Z,vRes,clsEOS,clsIO) :
 
     nSep = len(pSep)
-    nCom = clsEOS.NC
+    nCom = clsEOS.nComp
 
     vEst = 0.5
     iLiq =   1 ; iVap = -1
@@ -115,10 +114,10 @@ def sepFlash(iRat,pSep,tSep,Lsep,Vsep,Z,vRes,clsEOS,clsIO) :
 
     xSum = NP.sum(xSTO) ; ySum = NP.sum(ySTG)
 
-    Moil,Vliq,dLiq,Zoil,Uoil,dumS,dumS = CE.calcProps(iLiq,CO.pStand,CO.tStand,xSTO,clsEOS)
-    Mgas,Vvap,dVap,Zgas,Ugas,dumS,dumS = CE.calcProps(iVap,CO.pStand,CO.tStand,ySTG,clsEOS)
+    Moil,Vliq,dLiq,Zoil,Uoil,dumS,dumS = CE.calcProps(iLiq,UT.pStand,UT.tStand,xSTO,clsEOS)
+    Mgas,Vvap,dVap,Zgas,Ugas,dumS,dumS = CE.calcProps(iVap,UT.pStand,UT.tStand,ySTG,clsEOS)
 
-    vGas = mSTG*CO.volMol
+    vGas = mSTG*UT.volMol
     vOil = mSTO*Vliq
 
     if iRat == 1 :
@@ -147,7 +146,7 @@ def sepFlash(iRat,pSep,tSep,Lsep,Vsep,Z,vRes,clsEOS,clsIO) :
 #  Estimate the Convergence Pressure: Singh Appendix B
 #========================================================================
 
-def convPressure(dTab,clsBLK,clsIO) :
+def convPressure(dTab,clsBLK) :
 
     cCon = clsBLK.Co
     dSTO = clsBLK.dSTO
@@ -168,17 +167,17 @@ def convPressure(dTab,clsBLK,clsIO) :
     RsPK = - cCon*log(KoSat)/log(KgSat)         #-- Singh Eqn.(B1)
     BoPK = slop*RsPK + intr                     #-- Bo vs Rs at Conv Pres
 
-    DoPK = BP.denOil(dSTO,dSTG,RsPK,BoPK,clsIO)
+    DoPK = BP.denOil(dSTO,dSTG,RsPK,BoPK)
     xOPK = cCon/(cCon + RsPK)
-    MoPK = BP.phaseMw(mSTG,mSTO,xOPK,clsIO)
+    MoPK = BP.phaseMw(mSTG,mSTO,xOPK)
     VoPK = MoPK/DoPK
 
-    aCPK = BC.Acoef(xOPK,clsBLK,clsIO)
-    bCPK = BC.Bcoef(xOPK,clsBLK,clsIO)
-    cCPK = BC.Ccoef(xOPK,clsBLK,clsIO)
+    aCPK = BC.Acoef(xOPK,clsBLK)
+    bCPK = BC.Bcoef(xOPK,clsBLK)
+    cCPK = BC.Ccoef(xOPK,clsBLK)
     
-    uCPK = BC.Ucoef(VoPK,bCPK,cCPK,clsIO)
-    wCPK = BC.Wcoef(VoPK,bCPK,cCPK,clsIO)
+    uCPK = BC.Ucoef(VoPK,bCPK,cCPK)
+    wCPK = BC.Wcoef(VoPK,bCPK,cCPK)
 
     pCon = clsBLK.RT/uCPK - aCPK/wCPK
 
@@ -192,7 +191,7 @@ def convPressure(dTab,clsBLK,clsIO) :
 #  Extended (P > Psat) Values
 #========================================================================
 
-def extendTable(pSat,pCon,dTab,clsBLK,clsIO) :
+def extendTable(pSat,pCon,dTab,clsBLK) :
 
     cCon = clsBLK.Co
     dSTO = clsBLK.dSTO
@@ -247,10 +246,7 @@ def calcRsRv(cCon,pRes,pSat,KoSat,KgSat,mO,mG) :
 #  Calculate Saturated Properties
 #========================================================================
 
-def calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rs,clsBLK,clsIO) :
-
-    if clsIO.Deb["BLACK"] > 0 : qDeb = True
-    else                      : qDeb = False
+def calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rs,clsBLK) :
 
     if qLiq :
         xO  = cCon/(cCon + Rs)
@@ -259,12 +255,9 @@ def calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rs,clsBLK,clsIO) :
         xO = cCon*Rs/(cCon*Rs + 1.0)
         BoC = dSTG + Rs*dSTO
 
-    if qDeb :
-        print("xO,BoC {:8.5f} {:10.5f}".format(xO,BoC))
-
-    Bo = BP.calcPhaseFVF(qLiq,RTp,BoC,xO,clsBLK,clsIO)
+    Bo = BP.calcPhaseFVF(qLiq,RTp,BoC,xO,clsBLK)
     dO = BoC/Bo
-    uO = BP.calcLBCvisc(xO,dO,clsBLK,clsIO)
+    uO = BP.calcLBCvisc(xO,dO,clsBLK)
 
 #== Return values =====================================================    
     
@@ -274,7 +267,7 @@ def calcSatProp(qLiq,RTp,cCon,dSTO,dSTG,Rs,clsBLK,clsIO) :
 #  Calculate Compressibility and Viscosibility by Difference
 #========================================================================
 
-def calcComp(qLiq,RTp,cCon,dSTO,dSTG,Rs,Bo,Uo,clsBLK,clsIO) :
+def calcComp(qLiq,RTp,cCon,dSTO,dSTG,Rs,Bo,Uo,clsBLK) :
 
     pCur = clsBLK.RT/RTp    #-- Back-out the Current Pressure
     
@@ -283,7 +276,7 @@ def calcComp(qLiq,RTp,cCon,dSTO,dSTG,Rs,Bo,Uo,clsBLK,clsIO) :
     
     RTpP = clsBLK.RT/pPer
 
-    BoP,UoP = calcSatProp(qLiq,RTpP,cCon,dSTO,dSTG,Rs ,clsBLK,clsIO)
+    BoP,UoP = calcSatProp(qLiq,RTpP,cCon,dSTO,dSTG,Rs ,clsBLK)
 
     dBdp = (BoP - Bo)/delP
     dUdp = (UoP - Uo)/delP
@@ -301,7 +294,7 @@ def calcComp(qLiq,RTp,cCon,dSTO,dSTG,Rs,Bo,Uo,clsBLK,clsIO) :
 
 def gasFVF(pRes,tRes,Z) :
 
-    Bg = (CO.pStand/CO.tStand)*Z*tRes/pRes
+    Bg = (UT.pStand/UT.tStand)*Z*tRes/pRes
 
 #== Return value ======================================================
 
@@ -322,6 +315,36 @@ def setEoSVis(iSat,sOil,sGas,rOil,rGas,clsBLK) :
 #== No return value ===================================================
 
     return
+
+#========================================================================
+#  Lee & Gonzalez Gas Viscosity Correlation
+#  see Whitson & Brule, Section 3.3.5
+#========================================================================
+
+def gasViscLee(Rv,Bg,Tran,clsBLK) :
+
+    denLB = (clsBLK.dSTG + Rv*clsBLK.dSTO)/Bg  #-- Gas Density [lb/ft3]
+    denGM = denLB/62.428                       #-- gm/cm3
+
+    yO   = clsBLK.Co*Rv/(clsBLK.Co*Rv + 1.0)
+
+    molG = yO*clsBLK.mSTO + (1.0-yO)*clsBLK.mSTG
+
+    A1 = (9.379+0.01607*molG)*pow(Tran,1.5)/(209.2+19.26*molG+Tran)
+
+    A2 = 3.448 + 986.4/Tran + 0.01009*molG
+
+    A3 = 2.447 - 0.2224*A2
+
+    #print("A1,A2,A3 {:10.3e} {:10.3e} {:10.3e}".format(A1,A2,A3))
+
+#== Return Value [cP] =================================================
+
+    muLee = 0.0001*A1*exp(A2*pow(denGM,A3))
+
+    #print("Rv,yO,denGM,molG,muLee {:10.3e} {:10.3e} {:10.3e} {:10.3e} {:10.3e}".format(Rv,yO,denGM,molG,muLee))
+
+    return muLee
 
 #========================================================================
 #  End of Module
