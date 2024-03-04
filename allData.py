@@ -59,7 +59,11 @@ class classEOS :
     
     def __init__(self,EOS) :
 
-        self.Tref = 536.67  #-- Ref Temp (for Ideal Gas Enthalpy) [25 degC -> degR]
+        self.Tref  = 536.67  #-- Ref Temp (for Ideal Gas Enthalpy) [25 degC -> degR]
+
+        self.Tref2 = self.Tref*self.Tref
+        self.Tref3 = self.Tref*self.Tref2
+        self.Tref4 = self.Tref*self.Tref3
 
         self.EOS    = EOS
         self.nComp  = 0       #-- No components initially
@@ -412,6 +416,7 @@ class classEXP :
         self.xName = Name
         self.nRsat = -1
         self.nDref = -1
+        self.nRprs = -1
         self.PsatO = -1.0
         self.IsAct = True
         self.isDef = False
@@ -446,6 +451,8 @@ class classEXP :
     def setPsatCal(self,PsatC) : self.PsatC = PsatC
     def setPsatWei(self,PsatW) : self.PsatW = PsatW
     def setPsatUni(self,PsatU) : self.PsatU = PsatU
+
+    def setPresRow(self,nRprs) : self.nRprs = nRprs
 
 #-- Set Dref Row for GRD Experiment ---------------------------------
 
@@ -786,9 +793,10 @@ class classInpOut :
 
 #--------------------------------------------------------------------
 #  Option Flags; STAB = 0 (SS/GDEM) or 1 (BFGS)
+#                ENTH = 0 (No Calc) or 1 (Calc)
 #--------------------------------------------------------------------
 
-        self.Opt  = {"STAB" : 0}
+        self.Opt  = {"STAB" : 0, "ENTH" : 0}
 
         self.Tit1 = None
         self.Tit2 = None

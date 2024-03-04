@@ -135,6 +135,8 @@ def readOption(clsIO) :
 
         elif tokS[0][:4].upper() == "STAB"   : clsIO.Opt["STAB"] = int(tokS[1])
 
+        elif tokS[0][:4].upper() == "ENTH"   : clsIO.Opt["ENTH"] = int(tokS[1])
+
 #== Return values =====================================================
 
     return iERR

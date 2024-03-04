@@ -317,18 +317,18 @@ def kestinB(M) :
 #  Kestin C-Sum
 #========================================================================
 
-def kestinC(degC) :
+def kestinC(tC) :
 
     c1 =  1.2378E+00
     c2 = -1.3030E-03
     c3 =  3.0600E-06
     c4 =  2.5500E-08
 
-    T = 20.0 - degC
+    T = 20.0 - tC
 
     sumC = T*(c1 + T*(c2 + T*(c3 + T*c4)))
 
-    C = sumC/(96.0 + degC)
+    C = sumC/(96.0 + tC)
 
     return C
 
@@ -339,10 +339,8 @@ def kestinC(degC) :
 
 def calcMolal(mFrc) :
 
-    if mFrc > 0.0 :
-        molal = 17.1/(1.0/mFrc - 1.0)
-    else :
-        molal = 0.0
+    if mFrc > 0.0 : molal = 17.1/(1.0/mFrc - 1.0)
+    else          : molal =  0.0
 
     return molal
 

@@ -73,9 +73,6 @@ def calcEoSCoefsT(p,T,x,qT,clsEOS) :
         eI = NP.multiply(x,clsEOS.aQ)
         fI = NP.dot(clsEOS.LIJ,eI)
 
-        #for iC in range(nCom) :
-        #    fI[iC] = NP.dot(clsEOS.LIJ[iC,:],eI)
-
         dAidT = cT*NP.multiply(aI,fI) + cT*NP.multiply(clsEOS.aQ,dI) - tC*Ai
         dAdT  = cT*     NP.dot(cI,fI) + cT*     NP.dot(       eI,dI) - tC*A
 
@@ -700,7 +697,7 @@ def calcEnthSpecHeat(iPhs,p,T,x,clsEOS) :
 
     aD = dadT/a
 
-    C5 = T*aD - 1.0
+    C5 = 1.0 - T*aD
 
     HRes  = RT*(C2 + C3*C4*C5)
 
@@ -710,7 +707,7 @@ def calcEnthSpecHeat(iPhs,p,T,x,clsEOS) :
     dC3dT = C3*(dAdT/A - dBdT/B)  #-- dB/dT = -1/T but leave as-is
     dC4dT = (dEdT + clsEOS.n2*dBdT)/sig2 - (dEdT + clsEOS.n1*dBdT)/sig1
 
-    dC5dT = aD - T*aD*aD + T*d2adT2/a
+    dC5dT = - aD + T*aD*aD - T*d2adT2/a
 
     CpRes = HRes/T + RT*(dC2dT + C3*C4*dC5dT + C3*dC4dT*C5 + dC3dT*C4*C5)
 
@@ -734,13 +731,16 @@ def calcEnthSpecHeat(iPhs,p,T,x,clsEOS) :
 def calcIdealGasTherm(T,x,clsEOS) :
 
     nCom = clsEOS.nComp
-    Tref = clsEOS.Tref
 
-    T1 = T     ; T2 = T1*T1 ; T3 = T1*T2 ; T4 = T1*T3
-    U1 = Tref  ; U2 = U1*U1 ; U3 = U1*U2 ; U4 = U1*U3
-
-    tA =  T1 - U1      ;  tB = (T2 - U2)/2.0
-    tC = (T3 - U3)/3.0 ;  tD = (T4 - U4)/4.0
+    T1 = T     
+    T2 = T1*T1 
+    T3 = T1*T2 
+    T4 = T1*T3
+    
+    tA =  T1 - clsEOS.Tref      
+    tB = (T2 - clsEOS.Tref2)/2.0
+    tC = (T3 - clsEOS.Tref3)/3.0 
+    tD = (T4 - clsEOS.Tref4)/4.0
 
 #== Assemble sums =====================================================
 
@@ -776,21 +776,14 @@ def calcEoSCoefsA(p,T,x,clsEOS) :
 
 #== Sub-terms =========================================================
 
-    pI = NP.multiply(x,clsEOS.aP)
-    qI = NP.multiply(x,clsEOS.aQ)
+    pI = NP.multiply(x,clsEOS.aP)  #-- Vector
+    qI = NP.multiply(x,clsEOS.aQ)  #-- Vector
 
-    #sI = NP.zeros(nCom)
-    #tI = NP.zeros(nCom)
-
-    #for iC in range(nCom) :
-    #    sI[iC] = NP.dot(clsEOS.LIJ[iC,:],pI)
-    #    tI[iC] = NP.dot(clsEOS.LIJ[iC,:],qI)
-
-    sI = NP.dot(clsEOS.LIJ,pI)
-    tI = NP.dot(clsEOS.LIJ,qI)
+    sI = NP.dot(clsEOS.LIJ,pI)     #-- Vector = dot(Matrix.Vector)
+    tI = NP.dot(clsEOS.LIJ,qI)     #-- Vector = dot(Matrix.Vector)
 
     aT1 = NP.dot(pI,sI)
-    aT2 = NP.dot(pI,tI)
+    aT2 = NP.dot(pI,tI) + NP.dot(qI,sI)
     aT3 = NP.dot(qI,tI)
 
 #== a and its first/second derivative wrt Temperature =================    
@@ -813,7 +806,9 @@ def cubicNewton(eta,E2,E1,E0) :
 
 #-- Function, 1st & 2nd Derivatives at current estimate -------------    
 
-    f0 = cub0(eta,E2,E1,E0) ; f1 = cub1(eta,D2,E1) ; f2 = cub2(eta,D2)
+    f0 = cub0(eta,E2,E1,E0)
+    f1 = cub1(eta,D2,E1)
+    f2 = cub2(eta,D2)
     
 #-- Halley-Newton [3rd Order] Update --------------------------------        
         
@@ -831,7 +826,9 @@ def cubicNewton(eta,E2,E1,E0) :
 
         eta  = eta - dHal
 
-        f0 = cub0(eta,E2,E1,E0) ; f1 = cub1(eta,D2,E1) ; f2 = cub2(eta,D2)
+        f0 = cub0(eta,E2,E1,E0)
+        f1 = cub1(eta,D2,E1)
+        f2 = cub2(eta,D2)
 
         nCub += 1
         dNew =   f0/ f1

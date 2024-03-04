@@ -54,7 +54,7 @@ def aboutPVTfree() :
 --
 --  PVTfree Equation of State (EOS) PVT Program
 --    
---  Copyright (C) 2020
+--  Copyright (C) 2020-2022
 --    
 --  PVTfree is free software: you can redistribute it and/or modify
 --  it under the terms of the GNU General Public License as published by
@@ -69,7 +69,7 @@ def aboutPVTfree() :
 --  You should have received a copy of the GNU General Public License
 --  along with PVTfree.  If not, see <https://www.gnu.org/licenses/>.
 --    
---  Steve Furnival, HoBoil Limited, Banchory, UK, December 2020
+--  Steve Furnival, HoBoil Limited, Banchory, UK, December 2022
 --    
 --  email: steve.furnival@btinternet.com
 --

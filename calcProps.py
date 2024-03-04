@@ -101,8 +101,8 @@ def allProps(clsEOS,dicSAM,clsUNI,clsIO) :
 
     else :
 
-        molWt = dicSAM[0].mPlus
-        specG = dicSAM[0].sPlus
+        molWt = dicSAM[0].iPlsMW
+        specG = dicSAM[0].iPlsSG
 
         sLog = "Component ({:2d}) = {:4s} is Plus Fraction with No Split Requested - Properties Calculated".format(nUser+1,cPlus)
         print(sLog)

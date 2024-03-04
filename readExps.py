@@ -208,9 +208,12 @@ def readGen(sTyp,clsIO,clsEOS,dicSAM,dicEXP,clsUNI) :
 
                 dRow = NP.zeros(nHed)              #-- Store data on this row
 
-                if   tokS[0][:1].upper() == "P" :  #-- Found PSAT
+                if   tokS[0][:2].upper() == "PS" :  #-- Found PSAT
                     nLow =  1
                     isPD =  1
+                elif tokS[0][:2].upper() == "PR" :  #-- Found PRES
+                    nLow =  1
+                    isPD =  2
                 elif tokS[0][:1].upper() == "D" or \
                      tokS[0][:1].upper() == "H"    :  #-- Found DREF (GRD-Only)
                     nLow =  1                         #--    or HREF
@@ -227,6 +230,9 @@ def readGen(sTyp,clsIO,clsEOS,dicSAM,dicEXP,clsUNI) :
                 if   isPD ==  1 :
                     nRsat = len(dTab)
                     clsEXP.setPsatRow(nRsat-1)
+                elif isPD ==  2 :
+                    nRprs = len(dTab)
+                    clsEXP.setPresRow(nRprs-1)
                 elif isPD == -1 :
                     nDref = len(dTab)
                     clsEXP.setDrefRow(nDref-1)

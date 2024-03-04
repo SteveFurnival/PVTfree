@@ -768,6 +768,18 @@ def calcFLS(iExp,qDif,clsEOS,dicSAM,clsEXP,clsIO) :
         clsEXP.dCal[iZF][iPrs] = Zgas
         clsEXP.dCal[iDO][iPrs] = Doil
         clsEXP.dCal[iVF][iPrs] = V
+        
+#== Do we want Thermal Properties? ====================================    
+
+        if clsIO.Opt["ENTH"] == 1 : 
+           if V >= 0 and V <= 1 :
+               hL,CpL,uJTL = CE.calcEnthSpecHeat(iLiq,pRes,tRes,X,clsEOS)
+               hV,CpV,uJTV = CE.calcEnthSpecHeat(iVap,pRes,tRes,Y,clsEOS)
+               print("hL,CpL,uJTL ",hL,CpL,uJTL)
+               print("hV,CpV,uJTV ",hV,CpV,uJTV)
+           else :
+               hZ,CpZ,uJTZ = CE.calcEnthSpecHeat(0   ,pRes,tRes,Z,clsEOS)
+               print("hZ,CpZ,uJTZ {:12.5e} {:12.5e} {:12.5e}".format(hZ,CpZ,uJTZ))
 
 #======================================================================
 #  End of Module

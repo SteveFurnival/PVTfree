@@ -12,7 +12,7 @@
 
 import numpy     as NP
 import os
-import wx
+#import wxPython
 
 import allData     as AD
 import calcIntSamp as CI
@@ -370,6 +370,8 @@ def readSAMP(tokenS,clsEOS,dicSAM,clsUNI,clsIO) :
 #  Open a User Defined Sample via File Dialog of USR format
 #========================================================================
 
+'''
+
 def openUsrFile(self,clsEOS,dicSAM,clsUNI,clsIO) :
 
     iERR = 0
@@ -392,6 +394,8 @@ def openUsrFile(self,clsEOS,dicSAM,clsUNI,clsIO) :
 #== Return Error Flag =================================================
 
     return iERR
+
+'''    
 
 #========================================================================
 #  Read Usr File
@@ -462,8 +466,7 @@ def readUsrFile(filU,dicSAM,clsEOS,clsUNI,clsIO) :
 #== Define Sample Class and Assign Names, Moles, etc. =================
 
     if sNam == '' :
-        wx.MessageBox("No SNAME provided in USR File - Data Will No Be Processed'", \
-                      "USR file Read",wx.OK|wx.ICON_WARNING)
+        print("No SNAME provided in USR File - Data Will Not Be Processed")
         iERR = -1
         return iERR
 
@@ -479,22 +482,19 @@ def readUsrFile(filU,dicSAM,clsEOS,clsUNI,clsIO) :
             break
 
     if not qNew :
-        wx.MessageBox("SNAME provided in USR File already used - Data Will No Be Processed'", \
-                      "USR file Read",wx.OK|wx.ICON_WARNING)
+        print("SNAME provided in USR File already used - Data Will Not Be Processed")
         iERR = -1
         return iERR
 
 #-- Plus Fraction MW & SG Physical? ===================================
 
     if mPls < 90.0 or mPls > 1000.0 :
-        wx.MessageBox("MWPLUS provided in USR File not valid - Data Will No Be Processed'", \
-                      "USR file Read",wx.OK|wx.ICON_WARNING)
+        print("MWPLUS provided in USR File not valid - Data Will Not Be Processed")
         iERR = -1
         return iERR
 
     if gPls < 0.6 or gPls > 1.1 :
-        wx.MessageBox("SGPLUS provided in USR File not valid - Data Will No Be Processed'", \
-                      "USR file Read",wx.OK|wx.ICON_WARNING)
+        print("SGPLUS provided in USR File not valid - Data Will Not Be Processed")
         iERR = -1
         return iERR
 
